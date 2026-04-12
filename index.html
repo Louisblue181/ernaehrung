@@ -677,7 +677,7 @@ let water=ls('ep_water',{});
 
 // Gewichtsdaten werden manuell eingetragen
 
-function save(){ss('ep_profile',profile);ss('ep_days',days);ss('ep_weights',weights);ss('ep_custom',customMeals);ss('ep_rezepte',rezepte);ss('ep_mounjaro',mounjaro);ss('ep_favoriten',favoriten);ss('ep_sport',sportLog);ss('ep_water',water);}
+function save(){ss('ep_profile',profile);ss('ep_days',days);ss('ep_weights',weights);ss('ep_custom',customMeals);ss('ep_rezepte',rezepte);ss('ep_mounjaro',mounjaro);ss('ep_favoriten',favoriten);ss('ep_wochenplan',sheetWochenplan);ss('ep_sport',sportLog);ss('ep_water',water);}
 
 
 // ── FAVORITEN ─────────────────────────────────────────────────────────────────
@@ -777,6 +777,18 @@ function syncWithSheets() {
       }));
     } catch(e) {}
 
+    // Wochenplan laden
+    fetch(SHEETS_URL + '?action=getWochenplan')
+      .then(r=>r.json())
+      .then(wpData=>{
+        if(wpData.status==='ok'&&wpData.data){
+          sheetWochenplan=wpData.data;
+          save();
+          refresh();
+          console.log('Wochenplan geladen');
+        }
+      }).catch(e=>console.warn('Wochenplan:',e));
+
     sheetsLoaded = true;
     const total = countL + countR;
     showSyncBadge(total);
@@ -801,6 +813,49 @@ function syncWithSheets() {
 }
 window.syncWithSheets = syncWithSheets;
 
+
+window.importPlanDay=function(dk,dayName){
+  const plan=sheetWochenplan[dayName];
+  if(!plan)return;
+  if(!confirm('Wochenplan für heute übernehmen? Bestehende Einträge bleiben erhalten.'))return;
+  
+  const slots=['fruehstueck','mittagessen','abendessen','snack'];
+  const slotMap={fruehstueck:'fruehstueck',mittagessen:'mittagessen',abendessen:'abendessen',snack:'snacks'};
+  const labelMap={fruehstueck:'Frühstück',mittagessen:'Mittagessen',abendessen:'Abendessen',snack:'Snack'};
+  
+  if(!days[dk])days[dk]={};
+  
+  slots.forEach(slot=>{
+    const name=plan[slot];
+    if(!name)return;
+    const appSlot=slotMap[slot];
+    if(!Array.isArray(days[dk][appSlot]))days[dk][appSlot]=[];
+    
+    // Lebensmittel in allMeals suchen
+    const found=allMeals().find(m=>m.name.toLowerCase().includes(name.toLowerCase())||name.toLowerCase().includes(m.name.toLowerCase()));
+    if(found){
+      days[dk][appSlot].push({...found});
+    } else {
+      // Als unbekanntes Element hinzufügen
+      days[dk][appSlot].push({
+        id:'wp'+Date.now()+Math.random(),
+        name:name,
+        cat:'Geplant',
+        portion:'1 Portion (Wochenplan)',
+        kcal:0,ew:0,fett:0,kh:0,
+        type:'plan'
+      });
+    }
+  });
+  
+  save();refresh();
+  
+  const c=document.createElement('div');
+  c.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#8E44AD;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;z-index:999;white-space:nowrap';
+  c.textContent='📋 Wochenplan übernommen!';
+  document.body.appendChild(c);
+  setTimeout(()=>c.remove(),3000);
+};
 window.repeatYesterday=function(dk){
   const yesterday=new Date(dk);
   yesterday.setDate(yesterday.getDate()-1);
@@ -1107,6 +1162,22 @@ function renderDay(sid,dk,label){
   const sl=sportLog[dk]||[];
   if(sl.length){html+=`<div class="section-head">Sport<span style="font-size:11px;color:#1D9E75;margin-left:auto">−${sportDayTotal(dk)} kcal</span></div><div class="card" style="padding:4px 14px">`;sl.forEach((e,i)=>{html+=`<div class="meal-row"><div class="meal-info"><div class="meal-name">${e.name}</div><div class="meal-macro">${e.dauer} Min.</div></div><span class="sport-kcal">−${e.kcal}</span><button class="del-btn" onclick="removeSport('${dk}',${i})">×</button></div>`;});html+=`</div>`;}
   html+=`<button class="add-btn" onclick="openSportPicker('${dk}')">+ Sport eintragen</button>`;
+  // Wochenplan aus Sheet anzeigen
+  if(sid==='heute'&&sheetWochenplan&&Object.keys(sheetWochenplan).length>0){
+    const wochentage=['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
+    const dayName=wochentage[new Date(dk).getDay()];
+    const plan=sheetWochenplan[dayName];
+    if(plan&&(plan.fruehstueck||plan.mittagessen||plan.abendessen||plan.snack)){
+      html+=`<div class="section-head" style="margin-top:12px">📋 Wochenplan (aus Sheet)</div>
+      <div class="card" style="background:#F8F4FF;border:1px solid #E8D5F5">`;
+      if(plan.fruehstueck)html+=`<div style="padding:6px 0;border-bottom:1px solid #eee;font-size:13px"><span style="color:#888;font-size:11px">Frühstück</span><br>${plan.fruehstueck}</div>`;
+      if(plan.mittagessen)html+=`<div style="padding:6px 0;border-bottom:1px solid #eee;font-size:13px"><span style="color:#888;font-size:11px">Mittagessen</span><br>${plan.mittagessen}</div>`;
+      if(plan.abendessen)html+=`<div style="padding:6px 0;border-bottom:1px solid #eee;font-size:13px"><span style="color:#888;font-size:11px">Abendessen</span><br>${plan.abendessen}</div>`;
+      if(plan.snack)html+=`<div style="padding:6px 0;font-size:13px"><span style="color:#888;font-size:11px">Snack/Kaffee</span><br>${plan.snack}</div>`;
+      html+=`<button onclick="importPlanDay('${dk}','${dayName}')" style="width:100%;margin-top:10px;padding:9px;border:1px solid #8E44AD;border-radius:8px;background:none;cursor:pointer;font-size:12px;color:#8E44AD;font-weight:500">📥 Plan für heute übernehmen</button>
+      </div>`;
+    }
+  }
   html+=`<button onclick="repeatYesterday('${dk}')" style="width:100%;margin-top:8px;padding:11px;border:1px solid #185FA5;border-radius:8px;background:#EBF5FB;cursor:pointer;font-size:13px;color:#185FA5;font-weight:500">🔄 Mahlzeiten von gestern wiederholen</button>`;
   html+=`<button onclick="saveTagebuch('${dk}')" style="width:100%;margin-top:8px;padding:11px;border:1px solid #1D9E75;border-radius:8px;background:#F0FDF4;cursor:pointer;font-size:13px;color:#1D9E75;font-weight:500">📊 Tag ins Google Tagebuch speichern</button>`;
   if(sid==='morgen'&&days[todayKey()])html+=`<button class="secondary-btn" onclick="copyDay()">Heutigen Plan für morgen übernehmen</button>`;
@@ -1917,6 +1988,7 @@ function renderRezeptbuch(){
 let einkaufListe=ls('ep_einkauf',[]);
 let mounjaro=ls('ep_mounjaro',[]);
 let favoriten=ls('ep_favoriten',[]);
+let sheetWochenplan=ls('ep_wochenplan',{});
 
 // Merge FB-Rezepte nach allen State-Variablen
 (function initFBRezepte(){
