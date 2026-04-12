@@ -816,7 +816,8 @@ window.syncWithSheets = syncWithSheets;
 
 window.importPlanDay=function(dk,dayName){
   const plan=sheetWochenplan[dayName];
-  if(!plan)return;
+  console.log('importPlanDay:', dk, dayName, plan);
+  if(!plan){alert('Kein Plan für '+dayName+' gefunden.');return;}
   if(!confirm('Wochenplan für heute übernehmen? Bestehende Einträge bleiben erhalten.'))return;
   
   const slots=['fruehstueck','mittagessen','abendessen','snack'];
@@ -1165,7 +1166,9 @@ function renderDay(sid,dk,label){
   // Wochenplan aus Sheet anzeigen
   if(sid==='heute'&&sheetWochenplan&&Object.keys(sheetWochenplan).length>0){
     const wochentage=['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
-    const dayName=wochentage[new Date(dk).getDay()];
+    const dkParts=dk.split('-');
+    const dkDate=new Date(+dkParts[0],+dkParts[1]-1,+dkParts[2]);
+    const dayName=wochentage[dkDate.getDay()];
     const plan=sheetWochenplan[dayName];
     if(plan&&(plan.fruehstueck||plan.mittagessen||plan.abendessen||plan.snack)){
       html+=`<div class="section-head" style="margin-top:12px">📋 Wochenplan (aus Sheet)</div>
