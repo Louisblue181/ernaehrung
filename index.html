@@ -1016,7 +1016,7 @@ function targets(w){
   const p=profile,wt=w||p.gewicht;
   const gu=447.6+(9.2*wt)+(3.1*p.groesse)-(4.3*p.alter);
   const zk=Math.round(gu*p.aktivitaet-500);
-  const ew=Math.round(wt*1.3);
+  const ew=Math.round(Math.min(wt,80)*1.6);  // Eiweißziel auf Zielgewicht ~78-80kg basiert → ~130g
   const fett=Math.round(zk*0.28/9);
   const kh=Math.round((zk-(ew*4)-(fett*9))/4);
   return{zk,ew,fett,kh};
@@ -1157,7 +1157,7 @@ function renderDay(sid,dk,label){
     html+=`<button class="add-btn" onclick="openPicker('${dk}','${slot}','${lbl}')">+ ${lbl} hinzufügen</button>`;
   });
   html+=`<div class="section-head">Snacks & Naschen${d.snacks.length?`<span style="font-size:11px;color:#888;margin-left:auto">${d.snacks.reduce((a,s)=>a+s.kcal,0)} kcal</span>`:''}</div>`;
-  if(d.snacks.length){html+=`<div class="card" style="padding:4px 14px">`;d.snacks.forEach((s,i)=>{html+=`<div class="meal-row"><div class="meal-info"><div class="meal-name">${s.name}</div><div class="meal-macro">EW ${s.ew}g · F ${s.fett}g · KH ${s.kh}g</div></div><span style="font-size:13px;font-weight:500;white-space:nowrap">${s.kcal}</span><button class="del-btn" onclick="removeSnack('${dk}',${i})">×</button></div>`;});html+=`</div>`;}
+  if(d.snacks.length){html+=`<div class="card" style="padding:4px 14px">`;d.snacks.forEach((s,i)=>{html+=`<div class="meal-row"><div class="meal-info" onclick="editPortion('${dk}','snacks',${i})" style="cursor:pointer"><div class="meal-name">${s.name} <span style="font-size:10px;color:#aaa">✏️</span></div><div class="meal-macro">${s.portion||''} · ${s.kcal} kcal · EW ${s.ew}g · F ${s.fett}g · KH ${s.kh}g</div></div><span style="font-size:13px;font-weight:500;white-space:nowrap;cursor:pointer" onclick="editPortion('${dk}','snacks',${i})">${s.kcal}</span><button class="del-btn" onclick="removeSnack('${dk}',${i})">×</button></div>`;});html+=`</div>`;}
   html+=`<button class="add-btn" onclick="openSnack('${dk}')">+ Snack / Naschen</button>`;
   const sl=sportLog[dk]||[];
   if(sl.length){html+=`<div class="section-head">Sport<span style="font-size:11px;color:#1D9E75;margin-left:auto">−${sportDayTotal(dk)} kcal</span></div><div class="card" style="padding:4px 14px">`;sl.forEach((e,i)=>{html+=`<div class="meal-row"><div class="meal-info"><div class="meal-name">${e.name}</div><div class="meal-macro">${e.dauer} Min.</div></div><span class="sport-kcal">−${e.kcal}</span><button class="del-btn" onclick="removeSport('${dk}',${i})">×</button></div>`;});html+=`</div>`;}
