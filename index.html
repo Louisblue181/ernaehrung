@@ -731,22 +731,32 @@ function syncWithSheets() {
     let countL = 0, countR = 0;
 
     if (dataL && dataL.status === 'ok' && dataL.data) {
-      sheetsMeals = dataL.data.map(r => ({
-        id: r.id || 'gs'+Math.random(),
-        cat: r.kategorie || 'Sonstiges',
-        name: r.name || '',
-        portion: r.portion || '',
-        kcal: +r.kcal || 0,
-        ew: +r.ew || 0,
-        fett: +r.fett || 0,
-        kh: +r.kh || 0,
-        kcal100: +r.kcal100 || 0,
-        ew100: +r.ew100 || 0,
-        fett100: +r.fett100 || 0,
-        kh100: +r.kh100 || 0,
-        type: 'sheets'
-      }));
+      // Duplikate vermeiden: nur laden was nicht schon in BUILTIN ist
+      const builtinNames = new Set(BUILTIN.map(m => m.name.toLowerCase().trim()));
+      const builtinIds = new Set(BUILTIN.map(m => String(m.id)));
+      sheetsMeals = dataL.data
+        .filter(r => {
+          const name = (r.name||'').toLowerCase().trim();
+          const id = String(r.id||'');
+          return name && !builtinIds.has(id) && !builtinNames.has(name);
+        })
+        .map(r => ({
+          id: r.id || 'gs'+Math.random(),
+          cat: r.kategorie || 'Sonstiges',
+          name: r.name || '',
+          portion: r.portion || '',
+          kcal: +r.kcal || 0,
+          ew: +r.ew || 0,
+          fett: +r.fett || 0,
+          kh: +r.kh || 0,
+          kcal100: +r.kcal100 || 0,
+          ew100: +r.ew100 || 0,
+          fett100: +r.fett100 || 0,
+          kh100: +r.kh100 || 0,
+          type: 'sheets'
+        }));
       countL = sheetsMeals.length;
+      console.log('Sheets (ohne Duplikate):', countL);
     }
 
     if (dataR && dataR.status === 'ok' && dataR.data) {
@@ -1328,13 +1338,20 @@ function openPicker(dk,slot,lbl){
         <button onclick="openMealScanner('${dk}','${slot}')" style="padding:10px 12px;border:1px solid #1D9E75;border-radius:8px;background:#F0FDF4;cursor:pointer;font-size:16px" title="Barcode scannen">📷</button>
       </div>
       <div style="display:flex;gap:6px;margin-bottom:8px">
-        <button onclick="searchOFFMeal(window._pickerDk,window._pickerSlot)" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;background:none;cursor:pointer;font-size:12px;color:#666">🔍 Online suchen</button>
-        <button onclick="showManualEntry(window._pickerDk,window._pickerSlot)" style="flex:1;padding:8px;border:1px dashed #888;border-radius:8px;background:none;cursor:pointer;font-size:12px;color:#666">✏️ Manuell</button>
+        <button id="btn-off-search" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;background:none;cursor:pointer;font-size:12px;color:#666">🔍 Online suchen</button>
+        <button id="btn-manual" style="flex:1;padding:8px;border:1px dashed #888;border-radius:8px;background:none;cursor:pointer;font-size:12px;color:#666">✏️ Manuell</button>
       </div>
       <div class="cat-filter" id="picker-cats"></div>
       <div id="picker-list"></div>`;
     renderList();
-    setTimeout(()=>{const s=document.getElementById('ps');if(s)s.focus();},40);
+    setTimeout(()=>{
+      const s=document.getElementById('ps');if(s)s.focus();
+      // Attach event listeners after DOM is ready
+      const btnOff=document.getElementById('btn-off-search');
+      if(btnOff)btnOff.onclick=()=>searchOFFMeal(dk,slot);
+      const btnMan=document.getElementById('btn-manual');
+      if(btnMan)btnMan.onclick=()=>showManualEntry(dk,slot);
+    },40);
   }
   window.pSrch=v=>{search=v;activeCat='Alle';renderList();};
   window.pCat=c=>{activeCat=c;renderList();};
