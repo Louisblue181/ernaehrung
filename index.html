@@ -1264,6 +1264,101 @@ function copyDay(){
   save();refresh();
 }
 
+
+window.doPickerOFFSearch=async function(dk,slot){
+  const q=prompt('Produktname eingeben:');
+  if(!q||!q.trim())return;
+  document.getElementById('modal-content').innerHTML=`
+    <button class="close-btn" onclick="closeModal()">×</button>
+    <div class="modal-title">🔍 "${q}"</div>
+    <div style="text-align:center;padding:20px;color:#888">Suche läuft...</div>`;
+  openModal();
+  try{
+    const results=await searchOFF(q);
+    if(!results.length){
+      document.getElementById('modal-content').innerHTML=`
+        <button class="close-btn" onclick="closeModal()">×</button>
+        <div class="modal-title">Keine Ergebnisse</div>
+        <div class="empty-state">Nichts gefunden – anderen Begriff versuchen</div>`;
+      return;
+    }
+    let html=`<button class="close-btn" onclick="closeModal()">×</button><div class="modal-title">🔍 "${q}"</div>`;
+    results.forEach(p=>{
+      const n=p.name.replace(/'/g,"\'");
+      html+=`<div class="food-item" onclick="doPickerOFFPick('${dk}','${slot}','${n}',${p.kcal100},${p.ew100},${p.fett100},${p.kh100})">
+        <div style="flex:1"><div class="food-name">${p.name}</div>
+        <div class="food-detail">pro 100g: ${p.kcal100} kcal · EW ${p.ew100}g · F ${p.fett100}g · KH ${p.kh100}g</div></div>
+      </div>`;
+    });
+    document.getElementById('modal-content').innerHTML=html;
+  }catch(e){
+    document.getElementById('modal-content').innerHTML=`<button class="close-btn" onclick="closeModal()">×</button><div style="color:#E24B4A;padding:20px">Verbindungsfehler</div>`;
+  }
+};
+
+window.doPickerOFFPick=function(dk,slot,name,k100,e100,f100,kh100){
+  document.getElementById('modal-content').innerHTML=`
+    <button class="close-btn" onclick="closeModal()">×</button>
+    <div class="modal-title">${name}</div>
+    <div style="font-size:12px;color:#888;margin-bottom:10px">pro 100g: ${k100} kcal · EW ${e100}g · F ${f100}g · KH ${kh100}g</div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
+      <input class="inp" type="number" id="off-g" value="100" min="1" style="margin:0;width:90px" oninput="document.getElementById('off-prev').textContent=Math.round(${k100}*this.value/100)+' kcal · EW '+Math.round(${e100}*this.value/100)+'g'">
+      <span style="font-size:13px;color:#888">g</span>
+      <span id="off-prev" style="font-size:12px;color:#185FA5">${k100} kcal · EW ${e100}g</span>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button class="primary-btn" style="flex:1;margin:0" onclick="doPickerOFFAdd('${dk}','${slot}','${name}',${k100},${e100},${f100},${kh100},false)">Hinzufügen</button>
+      <button class="primary-btn" style="flex:1;margin:0;background:#1A5276" onclick="doPickerOFFAdd('${dk}','${slot}','${name}',${k100},${e100},${f100},${kh100},true)">+ Speichern</button>
+    </div>`;
+};
+
+window.doPickerOFFAdd=function(dk,slot,name,k100,e100,f100,kh100,save_db){
+  const g=parseFloat(document.getElementById('off-g').value)||100;
+  const entry={id:'off'+Date.now(),name,cat:'Eigene',portion:g+'g',
+    kcal:Math.round(k100*g/100),ew:Math.round(e100*g/100),
+    fett:Math.round(f100*g/100),kh:Math.round(kh100*g/100),
+    kcal100:k100,ew100:e100,fett100:f100,kh100:kh100,g,type:'custom'};
+  if(!Array.isArray(getDay(dk)[slot]))getDay(dk)[slot]=[];
+  getDay(dk)[slot].push({...entry});
+  if(save_db){customMeals.push(entry);saveToSheets(entry,'lebensmittel');}
+  save();closeModal();refresh();
+};
+
+window.doPickerManual=function(dk,slot){
+  document.getElementById('modal-content').innerHTML=`
+    <button class="close-btn" onclick="closeModal()">×</button>
+    <div class="modal-title">✏️ Manuell eingeben</div>
+    <input class="inp" type="text" id="me-name" placeholder="Name des Gerichts">
+    <div class="inp-row">
+      <input class="inp" type="number" id="me-kcal" placeholder="kcal" min="0">
+      <input class="inp" type="number" id="me-ew" placeholder="EW (g)" min="0">
+    </div>
+    <div class="inp-row">
+      <input class="inp" type="number" id="me-fett" placeholder="Fett (g)" min="0">
+      <input class="inp" type="number" id="me-kh" placeholder="KH (g)" min="0">
+    </div>
+    <input class="inp" type="text" id="me-portion" placeholder="Portion (z.B. 1 Teller, 200g)">
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="primary-btn" style="flex:1" onclick="doPickerManualAdd('${dk}','${slot}',false)">Hinzufügen</button>
+      <button class="primary-btn" style="flex:1;background:#1A5276" onclick="doPickerManualAdd('${dk}','${slot}',true)">+ Speichern</button>
+    </div>`;
+  setTimeout(()=>{const n=document.getElementById('me-name');if(n)n.focus();},40);
+};
+
+window.doPickerManualAdd=function(dk,slot,save_db){
+  const name=document.getElementById('me-name').value;
+  if(!name)return;
+  const entry={id:'me'+Date.now(),name,cat:'Eigene',
+    portion:document.getElementById('me-portion').value||'1 Portion',
+    kcal:+document.getElementById('me-kcal').value||0,
+    ew:+document.getElementById('me-ew').value||0,
+    fett:+document.getElementById('me-fett').value||0,
+    kh:+document.getElementById('me-kh').value||0,type:'custom'};
+  if(!Array.isArray(getDay(dk)[slot]))getDay(dk)[slot]=[];
+  getDay(dk)[slot].push({...entry});
+  if(save_db){customMeals.push(entry);saveToSheets(entry,'lebensmittel');}
+  save();closeModal();refresh();
+};
 function openPicker(dk,slot,lbl){
   let search='',activeCat='Alle';
   // Store for global access
@@ -1338,8 +1433,8 @@ function openPicker(dk,slot,lbl){
         <button onclick="openMealScanner('${dk}','${slot}')" style="padding:10px 12px;border:1px solid #1D9E75;border-radius:8px;background:#F0FDF4;cursor:pointer;font-size:16px" title="Barcode scannen">📷</button>
       </div>
       <div style="display:flex;gap:6px;margin-bottom:8px">
-        <button onclick="searchOFFMeal(window._pDk,window._pSlot)" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;background:none;cursor:pointer;font-size:12px;color:#666">🔍 Online suchen</button>
-        <button onclick="showManualEntry(window._pDk,window._pSlot)" style="flex:1;padding:8px;border:1px dashed #888;border-radius:8px;background:none;cursor:pointer;font-size:12px;color:#666">✏️ Manuell</button>
+        <button id="picker-off-btn" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;background:none;cursor:pointer;font-size:12px;color:#666">🔍 Online suchen</button>
+        <button id="picker-man-btn" style="flex:1;padding:8px;border:1px dashed #888;border-radius:8px;background:none;cursor:pointer;font-size:12px;color:#666">✏️ Manuell</button>
       </div>
       <div class="cat-filter" id="picker-cats"></div>
       <div id="picker-list"></div>`;
