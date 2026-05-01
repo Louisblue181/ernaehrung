@@ -1290,9 +1290,13 @@ window.doPickerOFFSearch=async function(dk,slot){
         <div class="food-detail">pro 100g: ${p.kcal100} kcal · EW ${p.ew100}g · F ${p.fett100}g · KH ${p.kh100}g</div></div>
       </div>`;
     });
-    document.getElementById('modal-content').innerHTML=html;
+    const mc=document.getElementById('modal-content');
+    if(mc)mc.innerHTML=html;
   }catch(e){
-    document.getElementById('modal-content').innerHTML=`<button class="close-btn" onclick="closeModal()">×</button><div style="color:#E24B4A;padding:20px">Verbindungsfehler</div>`;
+    console.error('OFF Search error:', e);
+    document.getElementById('modal-content').innerHTML=`<button class="close-btn" onclick="closeModal()">×</button>
+    <div style="color:#E24B4A;padding:20px">Fehler: ${e.message||'Unbekannt'}<br><br>
+    <button class="secondary-btn" onclick="doPickerOFFSearch(window._pDk,window._pSlot)">Nochmal versuchen</button></div>`;
   }
 };
 
