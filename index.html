@@ -1267,8 +1267,8 @@ function copyDay(){
 function openPicker(dk,slot,lbl){
   let search='',activeCat='Alle';
   // Store for global access
-  window._pickerDk=dk;
-  window._pickerSlot=slot;
+  window._pDk=dk;
+  window._pSlot=slot;
   const cats=['Alle','Frühstück','Mittagessen','Abendessen','Snack herzhaft','Snack süß','Snack Protein','Snack Süßes','Obst','Proteinquelle','Wurst','Beilage','Gemüse','Backwaren','Aufstrich','Käse','Convenience','Restaurant','Aus Sheets','Eigene','Rezepte'];
   function smartScore(m,restKcal,restEw,restFett,restKh){
     // Returns score 0-3 and color for traffic light
@@ -1338,19 +1338,15 @@ function openPicker(dk,slot,lbl){
         <button onclick="openMealScanner('${dk}','${slot}')" style="padding:10px 12px;border:1px solid #1D9E75;border-radius:8px;background:#F0FDF4;cursor:pointer;font-size:16px" title="Barcode scannen">📷</button>
       </div>
       <div style="display:flex;gap:6px;margin-bottom:8px">
-        <button id="btn-off-search" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;background:none;cursor:pointer;font-size:12px;color:#666">🔍 Online suchen</button>
-        <button id="btn-manual" style="flex:1;padding:8px;border:1px dashed #888;border-radius:8px;background:none;cursor:pointer;font-size:12px;color:#666">✏️ Manuell</button>
+        <button onclick="searchOFFMeal(window._pDk,window._pSlot)" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;background:none;cursor:pointer;font-size:12px;color:#666">🔍 Online suchen</button>
+        <button onclick="showManualEntry(window._pDk,window._pSlot)" style="flex:1;padding:8px;border:1px dashed #888;border-radius:8px;background:none;cursor:pointer;font-size:12px;color:#666">✏️ Manuell</button>
       </div>
       <div class="cat-filter" id="picker-cats"></div>
       <div id="picker-list"></div>`;
     renderList();
     setTimeout(()=>{
       const s=document.getElementById('ps');if(s)s.focus();
-      // Attach event listeners after DOM is ready
-      const btnOff=document.getElementById('btn-off-search');
-      if(btnOff)btnOff.onclick=()=>searchOFFMeal(dk,slot);
-      const btnMan=document.getElementById('btn-manual');
-      if(btnMan)btnMan.onclick=()=>showManualEntry(dk,slot);
+
     },40);
   }
   window.pSrch=v=>{search=v;activeCat='Alle';renderList();};
@@ -1653,8 +1649,8 @@ window.searchOFFMeal=function(dk,slot){
     <button class="close-btn" onclick="closeModal()">×</button>
     <div class="modal-title">Online suchen</div>
     <div style="display:flex;gap:8px;margin-bottom:12px">
-      <input class="inp" style="margin:0;flex:1" type="text" id="off-search-inp" placeholder="Produktname eingeben..." onkeydown="if(event.key==='Enter')doOFFMealSearch('${dk}','${slot}')">
-      <button class="primary-btn" style="margin:0;white-space:nowrap" onclick="doOFFMealSearch('${dk}','${slot}')">Suchen</button>
+      <input class="inp" style="margin:0;flex:1" type="text" id="off-search-inp" placeholder="Produktname eingeben..." onkeydown="if(event.key==='Enter')doOFFMealSearch(window._pDk,window._pSlot)">
+      <button class="primary-btn" style="margin:0;white-space:nowrap" onclick="doOFFMealSearch(window._pDk,window._pSlot)">Suchen</button>
     </div>
     <div id="off-meal-results"></div>`;
   openModal();
@@ -1691,6 +1687,7 @@ window.doOFFMealSearch=async function(dk,slot){
 };
 
 window.selectOFFMeal=function(dk,slot,name,k100,e100,f100,kh100){
+  window._offName=name; window._offK=k100; window._offE=e100; window._offF=f100; window._offKH=kh100;
   document.getElementById('modal-content').innerHTML=`
     <button class="close-btn" onclick="closeModal()">×</button>
     <div class="modal-title">${name}</div>
@@ -1700,9 +1697,12 @@ window.selectOFFMeal=function(dk,slot,name,k100,e100,f100,kh100){
       <span style="font-size:13px;color:#888">g</span>
     </div>
     <div style="display:flex;gap:6px">
-      <button class="primary-btn" style="flex:1;margin:0" onclick="addOFFMeal('${dk}','${slot}','${name.replace(/'/g,"\'")}',${k100},${e100},${f100},${kh100})">Hinzufügen</button>
-      <button class="primary-btn" style="flex:1;margin:0;background:#1A5276" onclick="addOFFMeal('${dk}','${slot}','${name.replace(/'/g,"\'")}',${k100},${e100},${f100},${kh100},true)">+ Speichern</button>
+      <button class="primary-btn" style="flex:1;margin:0" onclick="addOFFMealStored(false)">Hinzufügen</button>
+      <button class="primary-btn" style="flex:1;margin:0;background:#1A5276" onclick="addOFFMealStored(true)">+ Speichern</button>
     </div>`;
+};
+window.addOFFMealStored=function(save_db){
+  addOFFMeal(window._pDk,window._pSlot,window._offName,window._offK,window._offE,window._offF,window._offKH,save_db);
 };
 
 window.addOFFMeal=function(dk,slot,name,k100,e100,f100,kh100,save_db=false){
@@ -1738,9 +1738,10 @@ window.showManualEntry=function(dk,slot){
     </div>
     <input class="inp" type="text" id="me-portion" placeholder="Portion (z.B. 1 Teller, 200g)">
     <div style="display:flex;gap:8px;margin-top:4px">
-      <button class="primary-btn" style="flex:1" onclick="addManualEntry('${dk}','${slot}')">Hinzufügen</button>
-      <button class="primary-btn" style="flex:1;background:#1A5276" onclick="addManualEntry('${dk}','${slot}',true)">+ In Datenbank speichern</button>
+      <button class="primary-btn" style="flex:1" onclick="addManualEntry(window._pDk,window._pSlot)">Hinzufügen</button>
+      <button class="primary-btn" style="flex:1;background:#1A5276" onclick="addManualEntry(window._pDk,window._pSlot,true)">+ In Datenbank speichern</button>
     </div>`;
+  setTimeout(()=>{const n=document.getElementById('me-name');if(n)n.focus();},40);
 };
 window.addManualEntry=function(dk,slot,save_db=false){
   const name=document.getElementById('me-name').value;
