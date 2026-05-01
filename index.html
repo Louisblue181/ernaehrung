@@ -1680,8 +1680,9 @@ function drawChart(){
 }
 
 async function searchOFF(query){
-  const url=`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=8&lc=de`;
-  const res=await fetch(url);
+  // Use de.openfoodfacts.org for better CORS support
+  const url=`https://de.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=8`;
+  const res=await fetch(url, {headers:{'Accept':'application/json'}});
   const data=await res.json();
   return(data.products||[]).filter(p=>p.nutriments&&p.nutriments['energy-kcal_100g']>0).map(p=>({
     name:p.product_name||p.product_name_de||'Unbekannt',
