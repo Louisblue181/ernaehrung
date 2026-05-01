@@ -96,6 +96,9 @@ details summary::-webkit-details-marker{display:none}
 @keyframes scanline{0%{top:20%}50%{top:70%}100%{top:20%}}
 .scan-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
 .scan-box{width:200px;height:200px;border:2px solid #1D9E75;border-radius:8px}
+
+.sync-badge{display:none;background:#1D9E75;color:#fff;font-size:10px;padding:2px 7px;border-radius:99px;margin-left:4px;font-weight:500;vertical-align:middle}
+.sync-status{font-size:11px;color:#1D9E75;padding:4px 8px;text-align:center;background:#F0FDF4;border-bottom:1px solid #D5F5E3}
 </style>
 </head>
 <body>
@@ -108,6 +111,11 @@ details summary::-webkit-details-marker{display:none}
   <div class="tab" onclick="switchTab('rezeptbuch')">Buch</div>
   <div class="tab" onclick="switchTab('einkauf')">Einkauf</div>
   <div class="tab" onclick="switchTab('sport')">Sport</div>
+  <div class="tab" onclick="switchTab('mounjaro')">💉</div>
+</div>
+<div id="sync-status-bar" class="sync-status" style="display:flex;align-items:center;justify-content:space-between;padding:4px 12px">
+  <span id="sync-badge" style="font-size:11px;color:#1D9E75;font-weight:500"></span>
+  <button id="sync-btn" onclick="syncWithSheets()" style="padding:4px 12px;border:1px solid #1D9E75;border-radius:99px;background:none;cursor:pointer;font-size:11px;color:#1D9E75;font-weight:500">🔄 Sync</button>
 </div>
 <div id="heute" class="screen active"></div>
 <div id="morgen" class="screen"></div>
@@ -116,6 +124,7 @@ details summary::-webkit-details-marker{display:none}
 <div id="rezeptbuch" class="screen"></div>
 <div id="einkauf" class="screen"></div>
 <div id="sport" class="screen"></div>
+<div id="mounjaro" class="screen"></div>
 <div class="modal-bg" id="modal-bg"><div class="modal" id="modal-content"></div></div>
 </div>
 
@@ -123,7 +132,7 @@ details summary::-webkit-details-marker{display:none}
 
 const BUILTIN_REZEPTE=[
   {
-    id:'fb1',name:'Protein-Apfelkuchen',cat:'Snack',portionen:8,
+    id:'fb1',name:'Protein-Apfelkuchen',cat:'Snack süß',portionen:8,
     kcal:121,ew:8,fett:2,kh:21,portion:'1 Stück (von 8)',type:'rezept',
     zutaten:[
       {name:'Dinkelmehl',g:120,kcal100:329,ew100:13,fett100:3,kh100:60},
@@ -190,7 +199,7 @@ const BUILTIN_REZEPTE=[
     desc:'Pasta kochen. Hähnchen würzen, in Butter anbraten. Knoblauch kurz mitbraten. Sahne angießen, Parmesan einrühren, cremig einkochen. Pasta unterheben, mit Hähnchen servieren.'
   },
   {
-    id:'fb6',name:'Basis-Shake (Ernährungs-Docs)',cat:'Snack',portionen:1,
+    id:'fb6',name:'Basis-Shake (Ernährungs-Docs)',cat:'Snack Protein',portionen:1,
     kcal:220,ew:16,fett:6,kh:24,portion:'1 Shake',type:'rezept',
     zutaten:[
       {name:'Haferdrink ungesüßt',g:175,kcal100:45,ew100:1,fett100:2,kh100:6},
@@ -201,7 +210,7 @@ const BUILTIN_REZEPTE=[
     desc:'Alle Zutaten in einen Mixer geben und fein pürieren. Bei Bedarf mit etwas Wasser verdünnen. Optional: halbe Banane für mehr Süße oder 1 EL Leinöl für gesunde Fette.'
   },
   {
-    id:'fb7',name:'High-Protein Blueberry Donut Bites',cat:'Snack',portionen:6,
+    id:'fb7',name:'High-Protein Blueberry Donut Bites',cat:'Snack Protein',portionen:6,
     kcal:68,ew:5,fett:4,kh:4,portion:'1 Stück (von 6)',type:'rezept',
     zutaten:[
       {name:'Hüttenkäse',g:120,kcal100:98,ew100:11,fett100:4,kh100:3},
@@ -235,7 +244,7 @@ const BUILTIN_REZEPTE=[
     desc:'Hackfleisch mit Salz, Pfeffer und Gewürzen würzen und anbraten, abkühlen lassen. Blätterteig ausrollen, Käsescheiben auflegen, Hack darauf verteilen. Fest aufrollen, Enden verschließen. Bei 200°C Ober-/Unterhitze ca. 25 Minuten backen bis goldbraun.'
   },
   {
-    id:'fb10',name:'Heidelbeer-Käsekuchen (ohne Boden)',cat:'Snack',portionen:8,
+    id:'fb10',name:'Heidelbeer-Käsekuchen (ohne Boden)',cat:'Snack süß',portionen:8,
     kcal:118,ew:8,fett:8,kh:4,portion:'1 Stück (von 8)',type:'rezept',
     zutaten:[
       {name:'Griechischer Joghurt 10%',g:250,kcal100:133,ew100:9,fett100:10,kh100:4},
@@ -280,7 +289,7 @@ const BUILTIN_REZEPTE=[
     desc:'Alle Zutaten (bis auf Ölspray) zu einem Teig vermengen. Waffeleisen mit Ölspray besprühen. Je 1 EL Teig in die Waffelform geben und alle nacheinander ausbacken. Nach Wahl dekorieren und genießen. Optional: More Nutrition Protein Sahne oder Chunky Flavour für extra Protein.'
   },
   {
-    id:'fb14',name:'Zitronen-Löffelkuchen (Mealprep)',cat:'Snack',portionen:4,
+    id:'fb14',name:'Zitronen-Löffelkuchen (Mealprep)',cat:'Snack süß',portionen:4,
     kcal:301,ew:31,fett:7,kh:26,portion:'1 Schüssel (von 4)',type:'rezept',
     zutaten:[
       {name:'Magerquark',g:700,kcal100:74,ew100:13,fett100:1,kh100:4},
@@ -304,7 +313,7 @@ const BUILTIN_REZEPTE=[
     desc:'Backofen auf 220°C Ober-/Unterhitze vorheizen. Muffinförmchen fetten. Kartoffeln vorkochen, in Muffinform drücken, würzen. Eier, Hüttenkäse und 60g Käse mischen. Schinken unterheben. In die Förmchen füllen, mit restlichem Käse bestreuen. 30–35 Minuten backen bis goldbraun. Perfekt zum Aufwärmen – ideal als Mealprep!'
   },
   {
-    id:'fb16',name:'Haferflocken-Apfel-Kekse',cat:'Snack',portionen:9,
+    id:'fb16',name:'Haferflocken-Apfel-Kekse',cat:'Snack süß',portionen:9,
     kcal:60,ew:4,fett:2,kh:7,portion:'1 Keks (von 9)',type:'rezept',
     zutaten:[
       {name:'Ei',g:55,kcal100:155,ew100:13,fett100:11,kh100:1},
@@ -319,62 +328,62 @@ const BUILTIN_REZEPTE=[
 ];
 
 const BUILTIN=[
-  {id:'b1',cat:'Frühstück',name:'Joghurt-Bowl mit Beeren',portion:'250g Joghurt+80g Beeren',kcal:280,ew:20,fett:8,kh:22,type:'builtin'},
-  {id:'b2',cat:'Frühstück',name:'Rührei mit Wurst & Gemüse',portion:'3 Eier+50g Wurst',kcal:360,ew:28,fett:22,kh:6,type:'builtin'},
-  {id:'b3',cat:'Frühstück',name:'Naturquark mit Beeren & Haferflocken',portion:'200g Quark+30g Hfl.',kcal:290,ew:22,fett:3,kh:32,type:'builtin'},
-  {id:'b4',cat:'Frühstück',name:'Saatenbrot mit Hüttenkäse & Gurke',portion:'2 Scheiben+100g',kcal:270,ew:18,fett:5,kh:28,type:'builtin'},
-  {id:'b5',cat:'Frühstück',name:'Grießbrei mit Hafer-/Mandelmilch',portion:'60g Grieß+300ml',kcal:300,ew:12,fett:6,kh:48,type:'builtin'},
-  {id:'b6',cat:'Frühstück',name:'Omelett mit Spinat & Käse',portion:'3 Eier+30g Käse',kcal:340,ew:27,fett:22,kh:4,type:'builtin'},
-  {id:'b7',cat:'Frühstück',name:'Pumpernickel mit Ei & Gurke',portion:'2 Scheiben+2 Eier',kcal:240,ew:16,fett:9,kh:22,type:'builtin'},
-  {id:'b8',cat:'Mittagessen',name:'Hähnchengeschnetzeltes mit Reis',portion:'150g Hähnchen+150g Reis',kcal:480,ew:42,fett:8,kh:52,type:'builtin'},
-  {id:'b9',cat:'Mittagessen',name:'Hackfleisch-Pfanne mit Zucchini',portion:'150g Hack+Gemüse',kcal:510,ew:38,fett:18,kh:44,type:'builtin'},
-  {id:'b10',cat:'Mittagessen',name:'Kürbissuppe mit Kokosmilch & Hähnchen',portion:'350ml+100g Hähnchen',kcal:380,ew:30,fett:14,kh:28,type:'builtin'},
-  {id:'b11',cat:'Mittagessen',name:'Nudeln mit Hackfleisch-Tomatensoße',portion:'80g Nudeln+120g Hack',kcal:560,ew:36,fett:16,kh:60,type:'builtin'},
-  {id:'b12',cat:'Mittagessen',name:'Hähnchenbrust mit Kartoffeln & Brokkoli',portion:'150g+200g Kartoffeln',kcal:460,ew:40,fett:6,kh:46,type:'builtin'},
-  {id:'b13',cat:'Mittagessen',name:'Spinat-Eiweißpfanne mit Kartoffeln',portion:'3 Eier+150g Kartoffeln',kcal:390,ew:24,fett:14,kh:38,type:'builtin'},
-  {id:'b14',cat:'Abendessen',name:'Joghurt mit Gurke & Gewürzgurken',portion:'200g Joghurt+Gurke',kcal:180,ew:14,fett:6,kh:12,type:'builtin'},
-  {id:'b15',cat:'Abendessen',name:'Rührei mit Bockwurst & Salat',portion:'2 Eier+1 Bockwurst',kcal:320,ew:22,fett:22,kh:4,type:'builtin'},
-  {id:'b16',cat:'Abendessen',name:'Quark-Bowl mit Rohkost',portion:'150g Quark+Gemüse',kcal:210,ew:18,fett:3,kh:16,type:'builtin'},
-  {id:'b17',cat:'Abendessen',name:'Wiener mit Kartoffelsalat',portion:'2 Wiener+150g Salat',kcal:350,ew:16,fett:18,kh:28,type:'builtin'},
-  {id:'b18',cat:'Abendessen',name:'Hähnchenstreifen mit Eisbergsalat',portion:'120g Hähnchen+Salat',kcal:280,ew:28,fett:10,kh:8,type:'builtin'},
-  {id:'b19',cat:'Abendessen',name:'Spinat-Rührei mit Käse',portion:'3 Eier+Spinat+Käse',kcal:300,ew:24,fett:20,kh:4,type:'builtin'},
-  {id:'b20',cat:'Snack',name:'Naturquark mit Zimt',portion:'150g',kcal:120,ew:14,fett:1,kh:8,type:'builtin'},
-  {id:'b21',cat:'Snack',name:'Griechischer Joghurt mit Beeren',portion:'150g+50g Beeren',kcal:140,ew:10,fett:4,kh:12,type:'builtin'},
-  {id:'b22',cat:'Snack',name:'Hartgekochte Eier',portion:'2 Stück',kcal:140,ew:12,fett:10,kh:1,type:'builtin'},
-  {id:'b23',cat:'Snack',name:'Rohkost Möhren/Kohlrabi/Gurke',portion:'150g',kcal:55,ew:2,fett:0,kh:10,type:'builtin'},
-  {id:'b24',cat:'Snack',name:'Hüttenkäse mit Gewürzgurken',portion:'100g+2 Gurken',kcal:110,ew:12,fett:2,kh:6,type:'builtin'},
-  {id:'l1',cat:'Proteinquelle',name:'Lidl: Hähnchenbrustfilet (Meine Metzgerei)',portion:'150g',kcal:165,ew:35,fett:2,kh:0,type:'builtin'},
-  {id:'l2',cat:'Proteinquelle',name:'Lidl: Rinderhackfleisch 20% (Meine Metzgerei)',portion:'150g',kcal:330,ew:26,fett:25,kh:0,type:'builtin'},
-  {id:'l3',cat:'Proteinquelle',name:'Lidl: Wiener Würstchen (Meine Metzgerei)',portion:'2 Stück (100g)',kcal:290,ew:12,fett:26,kh:1,type:'builtin'},
-  {id:'l4',cat:'Proteinquelle',name:'Lidl: Griechischer Joghurt 10% (Milbona)',portion:'200g',kcal:206,ew:10,fett:14,kh:6,type:'builtin'},
-  {id:'l5',cat:'Proteinquelle',name:'Lidl: Speisequark 20% (Milbona)',portion:'200g',kcal:198,ew:24,fett:8,kh:6,type:'builtin'},
-  {id:'l6',cat:'Proteinquelle',name:'Lidl: Hüttenkäse (Milbona)',portion:'100g',kcal:98,ew:11,fett:4,kh:3,type:'builtin'},
-  {id:'l7',cat:'Proteinquelle',name:'Lidl: Eier Größe M (Milbona)',portion:'3 Stück',kcal:231,ew:18,fett:17,kh:1,type:'builtin'},
-  {id:'l8',cat:'Proteinquelle',name:'Lidl: Milch 3,5% (Milbona)',portion:'200ml',kcal:130,ew:7,fett:7,kh:10,type:'builtin'},
-  {id:'l9',cat:'Beilage',name:'Lidl: Langkornreis weiß',portion:'75g trocken',kcal:266,ew:6,fett:1,kh:58,type:'builtin'},
-  {id:'l10',cat:'Beilage',name:'Lidl: Nudeln hell (Combino)',portion:'80g trocken',kcal:276,ew:10,fett:1,kh:55,type:'builtin'},
-  {id:'l11',cat:'Beilage',name:'Lidl: Kartoffeln festkochend',portion:'200g',kcal:154,ew:4,fett:0,kh:34,type:'builtin'},
-  {id:'l12',cat:'Gemüse',name:'Lidl: TK Brokkoli',portion:'200g',kcal:60,ew:6,fett:0,kh:6,type:'builtin'},
-  {id:'l13',cat:'Gemüse',name:'Lidl: TK Blumenkohl',portion:'200g',kcal:50,ew:4,fett:0,kh:8,type:'builtin'},
-  {id:'l14',cat:'Gemüse',name:'Lidl: TK Spinat gehackt',portion:'150g',kcal:38,ew:4,fett:1,kh:2,type:'builtin'},
-  {id:'l15',cat:'Gemüse',name:'Lidl: TK Erbsen',portion:'100g',kcal:73,ew:5,fett:0,kh:12,type:'builtin'},
-  {id:'l16',cat:'Gemüse',name:'Lidl: Zucchini frisch',portion:'200g',kcal:34,ew:2,fett:0,kh:5,type:'builtin'},
-  {id:'l17',cat:'Beilage',name:'Lidl: Haferflocken (Goldähren)',portion:'50g',kcal:187,ew:6,fett:4,kh:32,type:'builtin'},
-  {id:'l18',cat:'Frühstück',name:'Lidl: Saatenbrot',portion:'2 Scheiben (80g)',kcal:196,ew:8,fett:4,kh:28,type:'builtin'},
-  {id:'l19',cat:'Frühstück',name:'Lidl: Pumpernickel',portion:'2 Scheiben (60g)',kcal:126,ew:4,fett:1,kh:24,type:'builtin'},
-  {id:'l20',cat:'Beilage',name:'Lidl: Kochsahne 15%',portion:'100ml',kcal:150,ew:3,fett:15,kh:4,type:'builtin'},
-  {id:'l21',cat:'Gemüse',name:'Lidl: Passierte Tomaten (Freshona)',portion:'200g',kcal:40,ew:2,fett:0,kh:8,type:'builtin'},
-  {id:'l22',cat:'Gemüse',name:'Lidl: Kokosmilch light (Freshona)',portion:'100ml',kcal:95,ew:1,fett:9,kh:3,type:'builtin'},
+  {id:'b1',cat:'Frühstück',name:'Joghurt-Bowl mit Beeren',portion:'250g Joghurt+80g Beeren',kcal:280,ew:20,fett:8,kh:22,type:'builtin',kcal100:85,ew100:6,fett100:2,kh100:7},
+  {id:'b2',cat:'Frühstück',name:'Rührei mit Wurst & Gemüse',portion:'3 Eier+50g Wurst',kcal:360,ew:28,fett:22,kh:6,type:'builtin',kcal100:129,ew100:10,fett100:8,kh100:2},
+  {id:'b3',cat:'Frühstück',name:'Naturquark mit Beeren & Haferflocken',portion:'200g Quark+30g Hfl.',kcal:290,ew:22,fett:3,kh:32,type:'builtin',kcal100:112,ew100:8,fett100:1,kh100:12},
+  {id:'b4',cat:'Frühstück',name:'Saatenbrot mit Hüttenkäse & Gurke',portion:'2 Scheiben+100g',kcal:270,ew:18,fett:5,kh:28,type:'builtin',kcal100:90,ew100:6,fett100:2,kh100:9},
+  {id:'b5',cat:'Frühstück',name:'Grießbrei mit Hafer-/Mandelmilch',portion:'60g Grieß+300ml',kcal:300,ew:12,fett:6,kh:48,type:'builtin',kcal100:83,ew100:3,fett100:2,kh100:13},
+  {id:'b6',cat:'Frühstück',name:'Omelett mit Spinat & Käse',portion:'3 Eier+30g Käse',kcal:340,ew:27,fett:22,kh:4,type:'builtin',kcal100:121,ew100:10,fett100:8,kh100:1},
+  {id:'b7',cat:'Frühstück',name:'Pumpernickel mit Ei & Gurke',portion:'2 Scheiben+2 Eier',kcal:240,ew:16,fett:9,kh:22,type:'builtin',kcal100:104,ew100:7,fett100:4,kh100:10},
+  {id:'b8',cat:'Mittagessen',name:'Hähnchengeschnetzeltes mit Reis',portion:'150g Hähnchen+150g Reis',kcal:480,ew:42,fett:8,kh:52,type:'builtin',kcal100:107,ew100:9,fett100:2,kh100:12},
+  {id:'b9',cat:'Mittagessen',name:'Hackfleisch-Pfanne mit Zucchini',portion:'150g Hack+Gemüse',kcal:510,ew:38,fett:18,kh:44,type:'builtin',kcal100:102,ew100:8,fett100:4,kh100:9},
+  {id:'b10',cat:'Mittagessen',name:'Kürbissuppe mit Kokosmilch & Hähnchen',portion:'350ml+100g Hähnchen',kcal:380,ew:30,fett:14,kh:28,type:'builtin',kcal100:84,ew100:7,fett100:3,kh100:6},
+  {id:'b11',cat:'Mittagessen',name:'Nudeln mit Hackfleisch-Tomatensoße',portion:'80g Nudeln+120g Hack',kcal:560,ew:36,fett:16,kh:60,type:'builtin',kcal100:133,ew100:9,fett100:4,kh100:14},
+  {id:'b12',cat:'Mittagessen',name:'Hähnchenbrust mit Kartoffeln & Brokkoli',portion:'150g+200g Kartoffeln',kcal:460,ew:40,fett:6,kh:46,type:'builtin',kcal100:84,ew100:7,fett100:1,kh100:8},
+  {id:'b13',cat:'Mittagessen',name:'Spinat-Eiweißpfanne mit Kartoffeln',portion:'3 Eier+150g Kartoffeln',kcal:390,ew:24,fett:14,kh:38,type:'builtin',kcal100:96,ew100:7,fett100:3,kh100:9},
+  {id:'b14',cat:'Abendessen',name:'Joghurt mit Gurke & Gewürzgurken',portion:'200g Joghurt+Gurke',kcal:180,ew:14,fett:6,kh:12,type:'builtin',kcal100:55,ew100:4,fett100:2,kh100:4},
+  {id:'b15',cat:'Abendessen',name:'Rührei mit Bockwurst & Salat',portion:'2 Eier+1 Bockwurst',kcal:320,ew:22,fett:22,kh:4,type:'builtin',kcal100:114,ew100:8,fett100:8,kh100:1},
+  {id:'b16',cat:'Abendessen',name:'Quark-Bowl mit Rohkost',portion:'150g Quark+Gemüse',kcal:210,ew:18,fett:3,kh:16,type:'builtin',kcal100:70,ew100:6,fett100:1,kh100:5},
+  {id:'b17',cat:'Abendessen',name:'Wiener mit Kartoffelsalat',portion:'2 Wiener+150g Salat',kcal:350,ew:16,fett:18,kh:28,type:'builtin',kcal100:100,ew100:5,fett100:5,kh100:8},
+  {id:'b18',cat:'Abendessen',name:'Hähnchenstreifen mit Eisbergsalat',portion:'120g Hähnchen+Salat',kcal:280,ew:28,fett:10,kh:8,type:'builtin',kcal100:100,ew100:10,fett100:4,kh100:3},
+  {id:'b19',cat:'Abendessen',name:'Spinat-Rührei mit Käse',portion:'3 Eier+Spinat+Käse',kcal:300,ew:24,fett:20,kh:4,type:'builtin',kcal100:94,ew100:8,fett100:6,kh100:1},
+  {id:'b20',cat:'Snack süß',name:'Naturquark mit Zimt',portion:'150g',kcal:120,ew:14,fett:1,kh:8,type:'builtin',kcal100:80,ew100:9,fett100:1,kh100:5},
+  {id:'b21',cat:'Snack süß',name:'Griechischer Joghurt mit Beeren',portion:'150g+50g Beeren',kcal:140,ew:10,fett:4,kh:12,type:'builtin',kcal100:70,ew100:5,fett100:2,kh100:6},
+  {id:'b22',cat:'Snack herzhaft',name:'Hartgekochte Eier',portion:'2 Stück',kcal:140,ew:12,fett:10,kh:1,type:'builtin',kcal100:140,ew100:12,fett100:10,kh100:1},
+  {id:'b23',cat:'Snack herzhaft',name:'Rohkost Möhren/Kohlrabi/Gurke',portion:'150g',kcal:55,ew:2,fett:0,kh:10,type:'builtin',kcal100:37,ew100:1,fett100:0,kh100:7},
+  {id:'b24',cat:'Snack herzhaft',name:'Hüttenkäse mit Gewürzgurken',portion:'100g+2 Gurken',kcal:110,ew:12,fett:2,kh:6,type:'builtin',kcal100:69,ew100:8,fett100:1,kh100:4},
+  {id:'l1',cat:'Proteinquelle',name:'Lidl: Hähnchenbrustfilet (Meine Metzgerei)',portion:'150g',kcal:165,ew:35,fett:2,kh:0,type:'builtin',kcal100:73,ew100:15,fett100:1,kh100:0},
+  {id:'l2',cat:'Proteinquelle',name:'Lidl: Rinderhackfleisch 20% (Meine Metzgerei)',portion:'150g',kcal:330,ew:26,fett:25,kh:0,type:'builtin',kcal100:153,ew100:11,fett100:12,kh100:0},
+  {id:'l3',cat:'Proteinquelle',name:'Lidl: Wiener Würstchen (Meine Metzgerei)',portion:'2 Stück (100g)',kcal:290,ew:12,fett:26,kh:1,type:'builtin',kcal100:280,ew100:12,fett100:26,kh100:1},
+  {id:'l4',cat:'Proteinquelle',name:'Lidl: Griechischer Joghurt 10% (Milbona)',portion:'200g',kcal:206,ew:10,fett:14,kh:6,type:'builtin',kcal100:52,ew100:4,fett100:5,kh100:2},
+  {id:'l5',cat:'Proteinquelle',name:'Lidl: Speisequark 20% (Milbona)',portion:'200g',kcal:198,ew:24,fett:8,kh:6,type:'builtin',kcal100:37,ew100:6,fett100:0,kh100:2},
+  {id:'l6',cat:'Proteinquelle',name:'Lidl: Hüttenkäse (Milbona)',portion:'100g',kcal:98,ew:11,fett:4,kh:3,type:'builtin',kcal100:98,ew100:11,fett100:4,kh100:3},
+  {id:'l7',cat:'Proteinquelle',name:'Lidl: Eier Größe M (Milbona)',portion:'3 Stück',kcal:231,ew:18,fett:17,kh:1,type:'builtin',kcal100:94,ew100:8,fett100:7,kh100:1},
+  {id:'l8',cat:'Proteinquelle',name:'Lidl: Milch 3,5% (Milbona)',portion:'200ml',kcal:130,ew:7,fett:7,kh:10,type:'builtin',kcal100:24,ew100:2,fett100:1,kh100:2},
+  {id:'l9',cat:'Beilage',name:'Lidl: Langkornreis weiß',portion:'75g trocken',kcal:266,ew:6,fett:1,kh:58,type:'builtin',kcal100:467,ew100:9,fett100:1,kh100:101},
+  {id:'l10',cat:'Beilage',name:'Lidl: Nudeln hell (Combino)',portion:'80g trocken',kcal:276,ew:10,fett:1,kh:55,type:'builtin',kcal100:438,ew100:15,fett100:2,kh100:88},
+  {id:'l11',cat:'Beilage',name:'Lidl: Kartoffeln festkochend',portion:'200g',kcal:154,ew:4,fett:0,kh:34,type:'builtin',kcal100:38,ew100:1,fett100:0,kh100:8},
+  {id:'l12',cat:'Gemüse',name:'Lidl: TK Brokkoli',portion:'200g',kcal:60,ew:6,fett:0,kh:6,type:'builtin',kcal100:15,ew100:2,fett100:0,kh100:2},
+  {id:'l13',cat:'Gemüse',name:'Lidl: TK Blumenkohl',portion:'200g',kcal:50,ew:4,fett:0,kh:8,type:'builtin',kcal100:12,ew100:1,fett100:0,kh100:2},
+  {id:'l14',cat:'Gemüse',name:'Lidl: TK Spinat gehackt',portion:'150g',kcal:38,ew:4,fett:1,kh:2,type:'builtin',kcal100:17,ew100:2,fett100:0,kh100:1},
+  {id:'l15',cat:'Gemüse',name:'Lidl: TK Erbsen',portion:'100g',kcal:73,ew:5,fett:0,kh:12,type:'builtin',kcal100:73,ew100:5,fett100:0,kh100:12},
+  {id:'l16',cat:'Gemüse',name:'Lidl: Zucchini frisch',portion:'200g',kcal:34,ew:2,fett:0,kh:5,type:'builtin',kcal100:8,ew100:0,fett100:0,kh100:2},
+  {id:'l17',cat:'Beilage',name:'Lidl: Haferflocken (Goldähren)',portion:'50g',kcal:187,ew:6,fett:4,kh:32,type:'builtin',kcal100:750,ew100:26,fett100:14,kh100:116},
+  {id:'l18',cat:'Frühstück',name:'Lidl: Saatenbrot',portion:'2 Scheiben (80g)',kcal:196,ew:8,fett:4,kh:28,type:'builtin',kcal100:306,ew100:12,fett100:6,kh100:44},
+  {id:'l19',cat:'Frühstück',name:'Lidl: Pumpernickel',portion:'2 Scheiben (60g)',kcal:126,ew:4,fett:1,kh:24,type:'builtin',kcal100:350,ew100:12,fett100:2,kh100:67},
+  {id:'l20',cat:'Beilage',name:'Lidl: Kochsahne 15%',portion:'100ml',kcal:150,ew:3,fett:15,kh:4,type:'builtin',kcal100:300,ew100:2,fett100:30,kh100:3},
+  {id:'l21',cat:'Gemüse',name:'Lidl: Passierte Tomaten (Freshona)',portion:'200g',kcal:40,ew:2,fett:0,kh:8,type:'builtin',kcal100:10,ew100:0,fett100:0,kh100:2},
+  {id:'l22',cat:'Gemüse',name:'Lidl: Kokosmilch light (Freshona)',portion:'100ml',kcal:95,ew:1,fett:9,kh:3,type:'builtin',kcal100:95,ew100:1,fett100:9,kh100:3},
   {id:'m1',cat:'Snack',name:'More: Total Protein Schoko (Pulver)',portion:'1 Portion 30g',kcal:113,ew:22,fett:2,kh:3,type:'builtin'},
   {id:'m2',cat:'Snack',name:'More: Total Protein Vanille (Pulver)',portion:'1 Portion 30g',kcal:112,ew:22,fett:2,kh:3,type:'builtin'},
   {id:'m3',cat:'Snack',name:'More: Total Protein Erdbeere (Pulver)',portion:'1 Portion 30g',kcal:111,ew:22,fett:2,kh:3,type:'builtin'},
-  {id:'m4',cat:'Snack',name:'More: Total Protein Shake mit Milch',portion:'30g Pulver+250ml Milch',kcal:275,ew:29,fett:9,kh:15,type:'builtin'},
-  {id:'m5',cat:'Snack',name:'More: Total Protein Shake mit Wasser',portion:'30g Pulver+300ml Wasser',kcal:113,ew:22,fett:2,kh:3,type:'builtin'},
-  {id:'m6',cat:'Snack',name:'More: Defined Whey Schoko',portion:'1 Portion 30g',kcal:109,ew:23,fett:1,kh:2,type:'builtin'},
-  {id:'m7',cat:'Snack',name:'More: Whey Shake mit Hafermilch',portion:'30g Pulver+250ml Hafermilch',kcal:225,ew:24,fett:4,kh:22,type:'builtin'},
-  {id:'m8',cat:'Frühstück',name:'More: Protein-Quark-Shake (Quark+Whey)',portion:'200g Quark+1 Port. Whey',kcal:330,ew:44,fett:4,kh:22,type:'builtin'},
-  {id:'m9',cat:'Snack',name:'More: Protein Bar',portion:'1 Riegel (60g)',kcal:198,ew:20,fett:7,kh:15,type:'builtin'},
-  {id:'m10',cat:'Snack',name:'More: Total Protein Shake mit Mandelmilch',portion:'30g Pulver+250ml Mandelmilch',kcal:148,ew:23,fett:4,kh:5,type:'builtin'},
+  {id:'m4',cat:'Snack Protein',name:'More: Total Protein Shake mit Milch',portion:'30g Pulver+250ml Milch',kcal:275,ew:29,fett:9,kh:15,type:'builtin'},
+  {id:'m5',cat:'Snack Protein',name:'More: Total Protein Shake mit Wasser',portion:'30g Pulver+300ml Wasser',kcal:113,ew:22,fett:2,kh:3,type:'builtin'},
+  {id:'m6',cat:'Snack Protein',name:'More: Defined Whey Schoko',portion:'1 Portion 30g',kcal:109,ew:23,fett:1,kh:2,type:'builtin'},
+  {id:'m7',cat:'Snack Protein',name:'More: Whey Shake mit Hafermilch',portion:'30g Pulver+250ml Hafermilch',kcal:225,ew:24,fett:4,kh:22,type:'builtin'},
+  {id:'m8',cat:'Snack Protein',name:'More: Protein-Quark-Shake (Quark+Whey)',portion:'200g Quark+1 Port. Whey',kcal:330,ew:44,fett:4,kh:22,type:'builtin'},
+  {id:'m9',cat:'Snack Protein',name:'More: Protein Bar',portion:'1 Riegel (60g)',kcal:198,ew:20,fett:7,kh:15,type:'builtin'},
+  {id:'m10',cat:'Snack Protein',name:'More: Total Protein Shake mit Mandelmilch',portion:'30g Pulver+250ml Mandelmilch',kcal:148,ew:23,fett:4,kh:5,type:'builtin'},
   // ── WEITERE LEBENSMITTEL (Supermarkt allgemein) ──
   {id:'s1',cat:'Proteinquelle',name:'Hähnchenbrustfilet (frisch)',portion:'150g',kcal:165,ew:35,fett:2,kh:0,type:'builtin'},
   {id:'s2',cat:'Proteinquelle',name:'Rinderhackfleisch gemischt',portion:'150g',kcal:290,ew:26,fett:20,kh:0,type:'builtin'},
@@ -403,23 +412,22 @@ const BUILTIN=[
   {id:'s25',cat:'Beilage',name:'Saatenbrot',portion:'2 Scheiben (80g)',kcal:196,ew:8,fett:4,kh:28,type:'builtin'},
   {id:'s26',cat:'Beilage',name:'Pumpernickel',portion:'2 Scheiben (60g)',kcal:126,ew:4,fett:1,kh:24,type:'builtin'},
   {id:'s27',cat:'Beilage',name:'Kochsahne 15% Fett',portion:'100ml',kcal:150,ew:3,fett:15,kh:4,type:'builtin'},
-  {id:'s28',cat:'Gemüse',name:'Brokkoli (TK oder frisch)',portion:'200g',kcal:60,ew:6,fett:0,kh:6,type:'builtin'},
-  {id:'s29',cat:'Gemüse',name:'Blumenkohl (TK oder frisch)',portion:'200g',kcal:50,ew:4,fett:0,kh:8,type:'builtin'},
-  {id:'s30',cat:'Gemüse',name:'Zucchini',portion:'200g',kcal:34,ew:2,fett:0,kh:5,type:'builtin'},
-  {id:'s31',cat:'Gemüse',name:'Spinat (TK, gehackt)',portion:'150g',kcal:38,ew:4,fett:1,kh:2,type:'builtin'},
-  {id:'s32',cat:'Gemüse',name:'Erbsen (TK)',portion:'100g',kcal:73,ew:5,fett:0,kh:12,type:'builtin'},
-  {id:'s33',cat:'Gemüse',name:'Grüne Bohnen (TK)',portion:'150g',kcal:42,ew:3,fett:0,kh:7,type:'builtin'},
-  {id:'s34',cat:'Gemüse',name:'Möhren',portion:'150g',kcal:53,ew:1,fett:0,kh:11,type:'builtin'},
-  {id:'s35',cat:'Gemüse',name:'Kohlrabi',portion:'150g',kcal:41,ew:3,fett:0,kh:7,type:'builtin'},
-  {id:'s36',cat:'Gemüse',name:'Gurke',portion:'200g',kcal:24,ew:1,fett:0,kh:4,type:'builtin'},
-  {id:'s37',cat:'Gemüse',name:'Eisbergsalat',portion:'100g',kcal:13,ew:1,fett:0,kh:2,type:'builtin'},
-  {id:'s38',cat:'Gemüse',name:'Kopfsalat',portion:'100g',kcal:14,ew:1,fett:0,kh:2,type:'builtin'},
-  {id:'s39',cat:'Gemüse',name:'Mais (Dose)',portion:'80g',kcal:65,ew:2,fett:1,kh:13,type:'builtin'},
-  {id:'s40',cat:'Gemüse',name:'Passierte Tomaten',portion:'200g',kcal:40,ew:2,fett:0,kh:8,type:'builtin'},
-  {id:'s41',cat:'Gemüse',name:'Kokosmilch light (Dose)',portion:'100ml',kcal:95,ew:1,fett:9,kh:3,type:'builtin'},
-  {id:'s42',cat:'Gemüse',name:'Kürbis (TK oder frisch)',portion:'200g',kcal:52,ew:2,fett:0,kh:11,type:'builtin'},
-  {id:'s43',cat:'Gemüse',name:'Gewürzgurken (Glas)',portion:'3 Stück (60g)',kcal:8,ew:0,fett:0,kh:1,type:'builtin'},
-  {id:'s44',cat:'Snack',name:'Beeren gemischt (TK)',portion:'100g',kcal:45,ew:1,fett:0,kh:10,type:'builtin'},
+  {id:'s28',cat:'Gemüse',name:'Brokkoli (TK oder frisch)',portion:'200g',kcal:60,ew:6,fett:0,kh:6,type:'builtin',kcal100:30,ew100:3,fett100:0,kh100:3},
+  {id:'s29',cat:'Gemüse',name:'Blumenkohl (TK oder frisch)',portion:'200g',kcal:50,ew:4,fett:0,kh:8,type:'builtin',kcal100:25,ew100:2,fett100:0,kh100:4},
+  {id:'s30',cat:'Gemüse',name:'Zucchini',portion:'200g',kcal:34,ew:2,fett:0,kh:5,type:'builtin',kcal100:17,ew100:1,fett100:0,kh100:3},
+  {id:'s31',cat:'Gemüse',name:'Spinat (TK, gehackt)',portion:'150g',kcal:38,ew:4,fett:1,kh:2,type:'builtin',kcal100:25,ew100:3,fett100:1,kh100:1},
+  {id:'s32',cat:'Gemüse',name:'Erbsen (TK)',portion:'100g',kcal:73,ew:5,fett:0,kh:12,type:'builtin',kcal100:73,ew100:5,fett100:0,kh100:12},
+  {id:'s33',cat:'Gemüse',name:'Grüne Bohnen (TK)',portion:'150g',kcal:42,ew:3,fett:0,kh:7,type:'builtin',kcal100:28,ew100:2,fett100:0,kh100:5},
+  {id:'s34',cat:'Gemüse',name:'Möhren',portion:'150g',kcal:53,ew:1,fett:0,kh:11,type:'builtin',kcal100:35,ew100:1,fett100:0,kh100:8},
+  {id:'s35',cat:'Gemüse',name:'Kohlrabi',portion:'150g',kcal:41,ew:3,fett:0,kh:7,type:'builtin',kcal100:27,ew100:2,fett100:0,kh100:5},
+  {id:'s36',cat:'Gemüse',name:'Gurke',portion:'200g',kcal:24,ew:1,fett:0,kh:4,type:'builtin',kcal100:12,ew100:1,fett100:0,kh100:2},
+  {id:'s37',cat:'Gemüse',name:'Eisbergsalat',portion:'100g',kcal:13,ew:1,fett:0,kh:2,type:'builtin',kcal100:13,ew100:1,fett100:0,kh100:2},
+  {id:'s38',cat:'Gemüse',name:'Kopfsalat',portion:'100g',kcal:14,ew:1,fett:0,kh:2,type:'builtin',kcal100:14,ew100:1,fett100:0,kh100:2},
+  {id:'s39',cat:'Gemüse',name:'Mais (Dose)',portion:'80g',kcal:65,ew:2,fett:1,kh:13,type:'builtin',kcal100:82,ew100:3,fett100:1,kh100:16},
+  {id:'s40',cat:'Gemüse',name:'Passierte Tomaten',portion:'200g',kcal:40,ew:2,fett:0,kh:8,type:'builtin',kcal100:20,ew100:1,fett100:0,kh100:4},
+  {id:'s41',cat:'Gemüse',name:'Kokosmilch light (Dose)',portion:'100ml',kcal:95,ew:1,fett:9,kh:3,type:'builtin',kcal100:95,ew100:1,fett100:9,kh100:3},
+  {id:'s42',cat:'Gemüse',name:'Kürbis (TK oder frisch)',portion:'200g',kcal:52,ew:2,fett:0,kh:11,type:'builtin',kcal100:26,ew100:1,fett100:0,kh100:6},
+  {id:'s43',cat:'Gemüse',name:'Gewürzgurken (Glas)',portion:'3 Stück (60g)',kcal:8,ew:0,fett:0,kh:1,type:'builtin',kcal100:13,ew100:0,fett100:0,kh100:2},
   {id:'s45',cat:'Proteinquelle',name:'Milch 1,5% Fett',portion:'200ml',kcal:95,ew:7,fett:3,kh:10,type:'builtin'},
   {id:'s46',cat:'Proteinquelle',name:'Milch 1,5% Fett (Kaffee)',portion:'100ml',kcal:47,ew:3,fett:2,kh:5,type:'builtin'},
   {id:'s47',cat:'Proteinquelle',name:'Mandelmilch ungesüßt',portion:'200ml',kcal:50,ew:1,fett:3,kh:4,type:'builtin'},
@@ -470,12 +478,12 @@ const BUILTIN=[
   // ── SÜSSES ──
   {id:'sw1',cat:'Süßes',name:'Marmelade / Konfitüre',portion:'15g (1 TL)',kcal:37,ew:0,fett:0,kh:9,type:'builtin'},
   {id:'sw2',cat:'Süßes',name:'Honig',portion:'10g (1 TL)',kcal:30,ew:0,fett:0,kh:8,type:'builtin'},
-  {id:'sw3',cat:'Süßes',name:'Zartbitter Schokolade 70%',portion:'2 Riegel (20g)',kcal:112,ew:2,fett:8,kh:8,type:'builtin'},
-  {id:'sw4',cat:'Süßes',name:'Vollmilchschokolade',portion:'2 Riegel (20g)',kcal:108,ew:2,fett:6,kh:12,type:'builtin'},
-  {id:'sw5',cat:'Süßes',name:'Nuss-Nougat-Creme (Nutella)',portion:'15g (1 TL)',kcal:82,ew:1,fett:5,kh:9,type:'builtin'},
-  {id:'sw6',cat:'Süßes',name:'Gummibärchen',portion:'1 Hand (30g)',kcal:98,ew:2,fett:0,kh:22,type:'builtin'},
-  {id:'sw7',cat:'Süßes',name:'Kekse / Butterkekse',portion:'3 Stück (30g)',kcal:141,ew:2,fett:6,kh:20,type:'builtin'},
-  {id:'sw8',cat:'Süßes',name:'Joghurt Frucht (gezuckert)',portion:'150g',kcal:135,ew:5,fett:3,kh:22,type:'builtin'},
+  {id:'sw3',cat:'Snack Süßes',name:'Zartbitter Schokolade 70%',portion:'2 Riegel (20g)',kcal:112,ew:2,fett:8,kh:8,type:'builtin'},
+  {id:'sw4',cat:'Snack Süßes',name:'Vollmilchschokolade',portion:'2 Riegel (20g)',kcal:108,ew:2,fett:6,kh:12,type:'builtin'},
+  {id:'sw5',cat:'Snack Süßes',name:'Nuss-Nougat-Creme (Nutella)',portion:'15g (1 TL)',kcal:82,ew:1,fett:5,kh:9,type:'builtin'},
+  {id:'sw6',cat:'Snack Süßes',name:'Gummibärchen',portion:'1 Hand (30g)',kcal:98,ew:2,fett:0,kh:22,type:'builtin'},
+  {id:'sw7',cat:'Snack Süßes',name:'Kekse / Butterkekse',portion:'3 Stück (30g)',kcal:141,ew:2,fett:6,kh:20,type:'builtin'},
+  {id:'sw8',cat:'Snack Süßes',name:'Joghurt Frucht (gezuckert)',portion:'150g',kcal:135,ew:5,fett:3,kh:22,type:'builtin'},
   // ── KÄSE ──
   {id:'ka1',cat:'Käse',name:'Gouda jung (Scheiben)',portion:'2 Scheiben (40g)',kcal:136,ew:10,fett:11,kh:0,type:'builtin'},
   {id:'ka2',cat:'Käse',name:'Emmentaler',portion:'2 Scheiben (40g)',kcal:152,ew:11,fett:12,kh:0,type:'builtin'},
@@ -495,9 +503,9 @@ const BUILTIN=[
   {id:'cv9',cat:'Convenience',name:'Schmelzkäse Scheiben',portion:'1 Scheibe (20g)',kcal:48,ew:3,fett:3,kh:2,type:'builtin'},
   {id:'cv10',cat:'Convenience',name:'Instantsuppe (Tüte)',portion:'1 Portion (500ml)',kcal:85,ew:3,fett:2,kh:14,type:'builtin'},
   // ── EI VARIANTEN ──
-  {id:'ei1',cat:'Proteinquelle',name:'Hartgekochtes Ei – 1 Stück',portion:'1 Stück (55g)',kcal:77,ew:6,fett:6,kh:0,type:'builtin',kcal100:140,ew100:12,fett100:10,kh100:1},
-  {id:'ei2',cat:'Proteinquelle',name:'Hartgekochte Eier – 2 Stück',portion:'2 Stück (110g)',kcal:154,ew:13,fett:11,kh:1,type:'builtin',kcal100:140,ew100:12,fett100:10,kh100:1},
-  {id:'ei3',cat:'Proteinquelle',name:'Hartgekochte Eier – 3 Stück',portion:'3 Stück (165g)',kcal:231,ew:19,fett:17,kh:1,type:'builtin',kcal100:140,ew100:12,fett100:10,kh100:1},
+  {id:'ei1',cat:'Snack herzhaft',name:'Hartgekochtes Ei – 1 Stück',portion:'1 Stück (55g)',kcal:77,ew:6,fett:6,kh:0,type:'builtin',kcal100:140,ew100:12,fett100:10,kh100:1},
+  {id:'ei2',cat:'Snack herzhaft',name:'Hartgekochte Eier – 2 Stück',portion:'2 Stück (110g)',kcal:154,ew:13,fett:11,kh:1,type:'builtin',kcal100:140,ew100:12,fett100:10,kh100:1},
+  {id:'ei3',cat:'Snack herzhaft',name:'Hartgekochte Eier – 3 Stück',portion:'3 Stück (165g)',kcal:231,ew:19,fett:17,kh:1,type:'builtin',kcal100:140,ew100:12,fett100:10,kh100:1},
   // ── JOGHURT & QUARK VARIANTEN ──
   {id:'jg1',cat:'Proteinquelle',name:'Griechischer Joghurt 10% – 100g',portion:'100g',kcal:103,ew:5,fett:7,kh:3,type:'builtin',kcal100:103,ew100:5,fett100:7,kh100:3},
   {id:'jg2',cat:'Proteinquelle',name:'Griechischer Joghurt 10% – 150g',portion:'150g',kcal:155,ew:8,fett:11,kh:5,type:'builtin',kcal100:103,ew100:5,fett100:7,kh100:3},
@@ -520,14 +528,14 @@ const BUILTIN=[
   {id:'ks7',cat:'Käse',name:'Mozzarella – ¼ Kugel',portion:'¼ Kugel (30g)',kcal:67,ew:5,fett:5,kh:0,type:'builtin',kcal100:223,ew100:17,fett100:17,kh100:0},
   {id:'ks8',cat:'Käse',name:'Mozzarella – ganze Kugel',portion:'1 Kugel (125g)',kcal:279,ew:21,fett:21,kh:0,type:'builtin',kcal100:223,ew100:17,fett100:17,kh100:0},
   // ── SÜSSES VARIANTEN ──
-  {id:'sv1',cat:'Süßes',name:'Zartbitter Schokolade – 1 Riegel',portion:'1 Riegel (10g)',kcal:56,ew:1,fett:4,kh:4,type:'builtin',kcal100:560,ew100:8,fett100:40,kh100:40},
-  {id:'sv2',cat:'Süßes',name:'Zartbitter Schokolade – 2 Riegel',portion:'2 Riegel (20g)',kcal:112,ew:2,fett:8,kh:8,type:'builtin',kcal100:560,ew100:8,fett100:40,kh100:40},
-  {id:'sv3',cat:'Süßes',name:'Nuss-Nougat-Creme – 1 TL',portion:'1 TL (10g)',kcal:55,ew:1,fett:3,kh:6,type:'builtin',kcal100:546,ew100:7,fett100:31,kh100:58},
-  {id:'sv4',cat:'Süßes',name:'Nuss-Nougat-Creme – 1 EL',portion:'1 EL (20g)',kcal:109,ew:1,fett:6,kh:12,type:'builtin',kcal100:546,ew100:7,fett100:31,kh100:58},
-  {id:'sv5',cat:'Süßes',name:'Marmelade – 1 TL',portion:'1 TL (10g)',kcal:25,ew:0,fett:0,kh:6,type:'builtin',kcal100:250,ew100:0,fett100:0,kh100:65},
-  {id:'sv6',cat:'Süßes',name:'Marmelade – 1 EL',portion:'1 EL (20g)',kcal:50,ew:0,fett:0,kh:12,type:'builtin',kcal100:250,ew100:0,fett100:0,kh100:65},
-  {id:'sv7',cat:'Süßes',name:'Honig – 1 TL',portion:'1 TL (7g)',kcal:21,ew:0,fett:0,kh:6,type:'builtin',kcal100:304,ew100:0,fett100:0,kh100:82},
-  {id:'sv8',cat:'Süßes',name:'Honig – 1 EL',portion:'1 EL (15g)',kcal:46,ew:0,fett:0,kh:12,type:'builtin',kcal100:304,ew100:0,fett100:0,kh100:82},
+  {id:'sv1',cat:'Snack Süßes',name:'Zartbitter Schokolade – 1 Riegel',portion:'1 Riegel (10g)',kcal:56,ew:1,fett:4,kh:4,type:'builtin',kcal100:560,ew100:8,fett100:40,kh100:40},
+  {id:'sv2',cat:'Snack Süßes',name:'Zartbitter Schokolade – 2 Riegel',portion:'2 Riegel (20g)',kcal:112,ew:2,fett:8,kh:8,type:'builtin',kcal100:560,ew100:8,fett100:40,kh100:40},
+  {id:'sv3',cat:'Snack Süßes',name:'Nuss-Nougat-Creme – 1 TL',portion:'1 TL (10g)',kcal:55,ew:1,fett:3,kh:6,type:'builtin',kcal100:546,ew100:7,fett100:31,kh100:58},
+  {id:'sv4',cat:'Snack Süßes',name:'Nuss-Nougat-Creme – 1 EL',portion:'1 EL (20g)',kcal:109,ew:1,fett:6,kh:12,type:'builtin',kcal100:546,ew100:7,fett100:31,kh100:58},
+  {id:'sv5',cat:'Snack Süßes',name:'Marmelade – 1 TL',portion:'1 TL (10g)',kcal:25,ew:0,fett:0,kh:6,type:'builtin',kcal100:250,ew100:0,fett100:0,kh100:65},
+  {id:'sv6',cat:'Snack Süßes',name:'Marmelade – 1 EL',portion:'1 EL (20g)',kcal:50,ew:0,fett:0,kh:12,type:'builtin',kcal100:250,ew100:0,fett100:0,kh100:65},
+  {id:'sv7',cat:'Snack Süßes',name:'Honig – 1 TL',portion:'1 TL (7g)',kcal:21,ew:0,fett:0,kh:6,type:'builtin',kcal100:304,ew100:0,fett100:0,kh100:82},
+  {id:'sv8',cat:'Snack Süßes',name:'Honig – 1 EL',portion:'1 EL (15g)',kcal:46,ew:0,fett:0,kh:12,type:'builtin',kcal100:304,ew100:0,fett100:0,kh100:82},
   // ── HAFERFLOCKEN & GETREIDE VARIANTEN ──
   {id:'hf1',cat:'Beilage',name:'Haferflocken – 30g',portion:'30g',kcal:112,ew:4,fett:2,kh:19,type:'builtin',kcal100:375,ew100:13,fett100:7,kh100:58},
   {id:'hf2',cat:'Beilage',name:'Haferflocken – 50g',portion:'50g',kcal:187,ew:7,fett:4,kh:29,type:'builtin',kcal100:375,ew100:13,fett100:7,kh100:58},
@@ -558,9 +566,91 @@ const BUILTIN=[
   {id:'gm6',cat:'Gemüse',name:'Möhren – 100g',portion:'100g',kcal:35,ew:1,fett:0,kh:7,type:'builtin',kcal100:35,ew100:1,fett100:0,kh100:7},
   {id:'gm7',cat:'Gemüse',name:'Zucchini – 100g',portion:'100g',kcal:17,ew:1,fett:0,kh:2,type:'builtin',kcal100:17,ew100:1,fett100:0,kh100:2},
   {id:'gm8',cat:'Gemüse',name:'Zucchini – 300g',portion:'300g (1 mittelgr.)',kcal:51,ew:3,fett:1,kh:7,type:'builtin',kcal100:17,ew100:1,fett100:0,kh100:2},
+  // ── OBST ──
+  {id:'ob1',cat:'Obst',name:'Apfel – klein',portion:'1 klein (120g)',kcal:62,ew:0,fett:0,kh:16,type:'builtin',kcal100:52,ew100:0,fett100:0,kh100:14},
+  {id:'ob2',cat:'Obst',name:'Apfel – mittel',portion:'1 mittel (160g)',kcal:83,ew:0,fett:0,kh:22,type:'builtin',kcal100:52,ew100:0,fett100:0,kh100:14},
+  {id:'ob3',cat:'Obst',name:'Apfel – groß',portion:'1 groß (200g)',kcal:104,ew:1,fett:0,kh:28,type:'builtin',kcal100:52,ew100:0,fett100:0,kh100:14},
+  {id:'ob4',cat:'Obst',name:'Banane – ½',portion:'½ Banane (60g)',kcal:53,ew:1,fett:0,kh:12,type:'builtin',kcal100:89,ew100:1,fett100:0,kh100:23},
+  {id:'ob5',cat:'Obst',name:'Banane – 1 klein',portion:'1 klein (100g)',kcal:89,ew:1,fett:0,kh:23,type:'builtin',kcal100:89,ew100:1,fett100:0,kh100:23},
+  {id:'ob6',cat:'Obst',name:'Banane – 1 groß',portion:'1 groß (140g)',kcal:125,ew:2,fett:0,kh:32,type:'builtin',kcal100:89,ew100:1,fett100:0,kh100:23},
+  {id:'ob7',cat:'Obst',name:'Erdbeeren',portion:'150g',kcal:48,ew:1,fett:0,kh:11,type:'builtin',kcal100:32,ew100:1,fett100:0,kh100:8},
+  {id:'ob8',cat:'Obst',name:'Erdbeeren',portion:'250g',kcal:80,ew:2,fett:0,kh:18,type:'builtin',kcal100:32,ew100:1,fett100:0,kh100:8},
+  {id:'ob9',cat:'Obst',name:'Blaubeeren / Heidelbeeren',portion:'100g',kcal:57,ew:1,fett:0,kh:14,type:'builtin',kcal100:57,ew100:1,fett100:0,kh100:14},
+  {id:'ob10',cat:'Obst',name:'Blaubeeren / Heidelbeeren',portion:'150g',kcal:86,ew:1,fett:0,kh:21,type:'builtin',kcal100:57,ew100:1,fett100:0,kh100:14},
+  {id:'ob11',cat:'Obst',name:'Himbeeren',portion:'100g',kcal:52,ew:1,fett:1,kh:12,type:'builtin',kcal100:52,ew100:1,fett100:1,kh100:12},
+  {id:'ob12',cat:'Obst',name:'Himbeeren',portion:'150g',kcal:78,ew:2,fett:1,kh:18,type:'builtin',kcal100:52,ew100:1,fett100:1,kh100:12},
+  {id:'ob13',cat:'Obst',name:'Beeren gemischt (TK)',portion:'100g',kcal:45,ew:1,fett:0,kh:10,type:'builtin',kcal100:45,ew100:1,fett100:0,kh100:10},
+  {id:'ob14',cat:'Obst',name:'Beeren gemischt (TK)',portion:'150g',kcal:68,ew:2,fett:0,kh:15,type:'builtin',kcal100:45,ew100:1,fett100:0,kh100:10},
+  {id:'ob15',cat:'Obst',name:'Orange',portion:'1 mittel (150g)',kcal:71,ew:1,fett:0,kh:18,type:'builtin',kcal100:47,ew100:1,fett100:0,kh100:12},
+  {id:'ob16',cat:'Obst',name:'Mandarine',portion:'1 Stück (80g)',kcal:42,ew:1,fett:0,kh:10,type:'builtin',kcal100:53,ew100:1,fett100:0,kh100:13},
+  {id:'ob17',cat:'Obst',name:'Mandarine',portion:'2 Stück (160g)',kcal:85,ew:2,fett:0,kh:20,type:'builtin',kcal100:53,ew100:1,fett100:0,kh100:13},
+  {id:'ob18',cat:'Obst',name:'Trauben',portion:'100g',kcal:69,ew:1,fett:0,kh:18,type:'builtin',kcal100:69,ew100:1,fett100:0,kh100:18},
+  {id:'ob19',cat:'Obst',name:'Trauben',portion:'150g',kcal:104,ew:1,fett:0,kh:27,type:'builtin',kcal100:69,ew100:1,fett100:0,kh100:18},
+  {id:'ob20',cat:'Obst',name:'Mango',portion:'½ (150g)',kcal:96,ew:1,fett:0,kh:25,type:'builtin',kcal100:64,ew100:1,fett100:0,kh100:17},
+  {id:'ob21',cat:'Obst',name:'Ananas (frisch)',portion:'2 Scheiben (150g)',kcal:78,ew:1,fett:0,kh:20,type:'builtin',kcal100:52,ew100:1,fett100:0,kh100:14},
+  {id:'ob22',cat:'Obst',name:'Pfirsich / Nektarine',portion:'1 Stück (150g)',kcal:58,ew:1,fett:0,kh:14,type:'builtin',kcal100:39,ew100:1,fett100:0,kh100:10},
+  {id:'ob23',cat:'Obst',name:'Wassermelone',portion:'2 Scheiben (300g)',kcal:90,ew:2,fett:0,kh:23,type:'builtin',kcal100:30,ew100:1,fett100:0,kh100:8},
+  {id:'ob24',cat:'Obst',name:'Kiwi',portion:'1 Stück (80g)',kcal:46,ew:1,fett:0,kh:11,type:'builtin',kcal100:58,ew100:1,fett100:0,kh100:14},
+  {id:'ob25',cat:'Obst',name:'Birne',portion:'1 mittel (160g)',kcal:86,ew:1,fett:0,kh:22,type:'builtin',kcal100:54,ew100:0,fett100:0,kh100:14},
+
+  // ── DÖNER ──
+  {id:'rs1',cat:'Restaurant',name:'Döner Kebab (Fleisch)',portion:'1 Stück (~350g)',kcal:700,ew:35,fett:32,kh:62,type:'builtin',kcal100:200,ew100:10,fett100:9,kh100:18},
+  {id:'rs2',cat:'Restaurant',name:'Döner Kebab (Chicken)',portion:'1 Stück (~350g)',kcal:620,ew:38,fett:24,kh:62,type:'builtin',kcal100:177,ew100:11,fett100:7,kh100:18},
+  {id:'rs3',cat:'Restaurant',name:'Döner Kebab (Vegi)',portion:'1 Stück (~320g)',kcal:520,ew:18,fett:20,kh:65,type:'builtin',kcal100:163,ew100:6,fett100:6,kh100:20},
+  {id:'rs4',cat:'Restaurant',name:'Döner Teller mit Reis',portion:'1 Teller (~500g)',kcal:750,ew:40,fett:28,kh:75,type:'builtin',kcal100:150,ew100:8,fett100:6,kh100:15},
+  // ── McDONALD'S ──
+  {id:'rs5',cat:'Restaurant',name:"McDonald's Big Mac",portion:'1 Stück (200g)',kcal:503,ew:25,fett:26,kh:43,type:'builtin',kcal100:252,ew100:13,fett100:13,kh100:22},
+  {id:'rs6',cat:'Restaurant',name:"McDonald's McChicken",portion:'1 Stück (187g)',kcal:387,ew:17,fett:17,kh:41,type:'builtin',kcal100:207,ew100:9,fett100:9,kh100:22},
+  {id:'rs7',cat:'Restaurant',name:"McDonald's Pommes (mittel)",portion:'1 Portion (117g)',kcal:337,ew:4,fett:16,kh:44,type:'builtin',kcal100:288,ew100:3,fett100:14,kh100:38},
+  {id:'rs8',cat:'Restaurant',name:"McDonald's Pommes (groß)",portion:'1 Portion (154g)',kcal:444,ew:5,fett:21,kh:58,type:'builtin',kcal100:288,ew100:3,fett100:14,kh100:38},
+  {id:'rs9',cat:'Restaurant',name:"McDonald's Cheeseburger",portion:'1 Stück (120g)',kcal:301,ew:15,fett:12,kh:33,type:'builtin',kcal100:251,ew100:13,fett100:10,kh100:28},
+  {id:'rs10',cat:'Restaurant',name:"McDonald's McFlurry Oreo",portion:'1 Becher (200g)',kcal:340,ew:7,fett:10,kh:55,type:'builtin',kcal100:170,ew100:4,fett100:5,kh100:28},
+  // ── PIZZA ──
+  {id:'rs11',cat:'Restaurant',name:'Pizza Margherita (1 Stück)',portion:'1 Stück (~120g)',kcal:265,ew:11,fett:9,kh:36,type:'builtin',kcal100:221,ew100:9,fett100:8,kh100:30},
+  {id:'rs12',cat:'Restaurant',name:'Pizza Salami (1 Stück)',portion:'1 Stück (~130g)',kcal:320,ew:13,fett:14,kh:36,type:'builtin',kcal100:246,ew100:10,fett100:11,kh100:28},
+  {id:'rs13',cat:'Restaurant',name:'Pizza Hawaii (1 Stück)',portion:'1 Stück (~130g)',kcal:290,ew:13,fett:9,kh:40,type:'builtin',kcal100:223,ew100:10,fett100:7,kh100:31},
+  {id:'rs14',cat:'Restaurant',name:'Pizza Margherita (ganz)',portion:'1 Pizza (~400g)',kcal:884,ew:36,fett:30,kh:120,type:'builtin',kcal100:221,ew100:9,fett100:8,kh100:30},
+  {id:'rs15',cat:'Restaurant',name:'Pizza Salami (ganz)',portion:'1 Pizza (~430g)',kcal:1057,ew:44,fett:46,kh:119,type:'builtin',kcal100:246,ew100:10,fett100:11,kh100:28},
+  // ── GRIECHISCH ──
+  {id:'rs16',cat:'Restaurant',name:'Gyros mit Pommes',portion:'1 Teller (~450g)',kcal:850,ew:38,fett:42,kh:72,type:'builtin',kcal100:189,ew100:8,fett100:9,kh100:16},
+  {id:'rs17',cat:'Restaurant',name:'Gyros Teller mit Reis',portion:'1 Teller (~450g)',kcal:720,ew:40,fett:28,kh:70,type:'builtin',kcal100:160,ew100:9,fett100:6,kh100:16},
+  {id:'rs18',cat:'Restaurant',name:'Souvlaki (2 Spieße)',portion:'2 Spieße (~200g)',kcal:320,ew:30,fett:18,kh:4,type:'builtin',kcal100:160,ew100:15,fett100:9,kh100:2},
+  {id:'rs19',cat:'Restaurant',name:'Tzatziki',portion:'1 Portion (100g)',kcal:90,ew:4,fett:7,kh:4,type:'builtin',kcal100:90,ew100:4,fett100:7,kh100:4},
+  {id:'rs20',cat:'Restaurant',name:'Griechischer Salat',portion:'1 Portion (~250g)',kcal:220,ew:8,fett:16,kh:10,type:'builtin',kcal100:88,ew100:3,fett100:6,kh100:4},
+  {id:'rs21',cat:'Restaurant',name:'Moussaka',portion:'1 Portion (~350g)',kcal:490,ew:22,fett:28,kh:35,type:'builtin',kcal100:140,ew100:6,fett100:8,kh100:10},
+  // ── INDISCH ──
+  {id:'rs22',cat:'Restaurant',name:'Butter Chicken (Restaurant)',portion:'1 Portion (~300g)',kcal:450,ew:32,fett:22,kh:28,type:'builtin',kcal100:150,ew100:11,fett100:7,kh100:9},
+  {id:'rs23',cat:'Restaurant',name:'Chicken Tikka Masala',portion:'1 Portion (~300g)',kcal:420,ew:30,fett:20,kh:28,type:'builtin',kcal100:140,ew100:10,fett100:7,kh100:9},
+  {id:'rs24',cat:'Restaurant',name:'Naan Brot',portion:'1 Stück (~90g)',kcal:262,ew:8,fett:5,kh:46,type:'builtin',kcal100:291,ew100:9,fett100:6,kh100:51},
+  {id:'rs25',cat:'Restaurant',name:'Basmati Reis (Beilage)',portion:'1 Portion (150g)',kcal:195,ew:4,fett:0,kh:44,type:'builtin',kcal100:130,ew100:3,fett100:0,kh100:29},
+  {id:'rs26',cat:'Restaurant',name:'Samosa (2 Stück)',portion:'2 Stück (~100g)',kcal:260,ew:5,fett:14,kh:30,type:'builtin',kcal100:260,ew100:5,fett100:14,kh100:30},
+  {id:'rs27',cat:'Restaurant',name:'Dal (Linsensuppe)',portion:'1 Portion (~250g)',kcal:220,ew:12,fett:6,kh:30,type:'builtin',kcal100:88,ew100:5,fett100:2,kh100:12},
+  // ── ASIATISCH ──
+  {id:'rs28',cat:'Restaurant',name:'Gebratener Reis mit Ei',portion:'1 Portion (~350g)',kcal:490,ew:14,fett:16,kh:72,type:'builtin',kcal100:140,ew100:4,fett100:5,kh100:21},
+  {id:'rs29',cat:'Restaurant',name:'Gebratener Reis mit Hähnchen',portion:'1 Portion (~380g)',kcal:540,ew:24,fett:16,kh:72,type:'builtin',kcal100:142,ew100:6,fett100:4,kh100:19},
+  {id:'rs30',cat:'Restaurant',name:'Frühlingsrolle (gebacken)',portion:'2 Stück (~120g)',kcal:300,ew:7,fett:14,kh:36,type:'builtin',kcal100:250,ew100:6,fett100:12,kh100:30},
+  {id:'rs31',cat:'Restaurant',name:'Dim Sum (gedämpft, 4 Stück)',portion:'4 Stück (~120g)',kcal:200,ew:10,fett:6,kh:26,type:'builtin',kcal100:167,ew100:8,fett100:5,kh100:22},
+  {id:'rs32',cat:'Restaurant',name:'Pad Thai mit Hähnchen',portion:'1 Portion (~380g)',kcal:580,ew:28,fett:18,kh:74,type:'builtin',kcal100:153,ew100:7,fett100:5,kh100:19},
+  {id:'rs33',cat:'Restaurant',name:'Sushi (8 Stück gemischt)',portion:'8 Stück (~200g)',kcal:320,ew:14,fett:4,kh:56,type:'builtin',kcal100:160,ew100:7,fett100:2,kh100:28},
+  // ── CHINESISCH ──
+  {id:'rs34',cat:'Restaurant',name:'Ente süß-sauer',portion:'1 Portion (~300g)',kcal:480,ew:22,fett:20,kh:50,type:'builtin',kcal100:160,ew100:7,fett100:7,kh100:17},
+  {id:'rs35',cat:'Restaurant',name:'Wonton Suppe',portion:'1 Schüssel (~350ml)',kcal:220,ew:12,fett:6,kh:28,type:'builtin',kcal100:63,ew100:3,fett100:2,kh100:8},
+  {id:'rs36',cat:'Restaurant',name:'Chop Suey mit Hähnchen',portion:'1 Portion (~350g)',kcal:320,ew:24,fett:10,kh:32,type:'builtin',kcal100:91,ew100:7,fett100:3,kh100:9},
+  {id:'rs37',cat:'Restaurant',name:'Gebratene Ente (½)',portion:'½ Ente (~300g)',kcal:660,ew:42,fett:50,kh:0,type:'builtin',kcal100:220,ew100:14,fett100:17,kh100:0},
+  // ── CURRYWURST & SCHNITZEL ──
+  {id:'rs38',cat:'Restaurant',name:'Currywurst mit Pommes',portion:'1 Portion (~400g)',kcal:750,ew:22,fett:40,kh:72,type:'builtin',kcal100:188,ew100:6,fett100:10,kh100:18},
+  {id:'rs39',cat:'Restaurant',name:'Currywurst ohne Pommes',portion:'1 Portion (~200g)',kcal:380,ew:14,fett:28,kh:18,type:'builtin',kcal100:190,ew100:7,fett100:14,kh100:9},
+  {id:'rs40',cat:'Restaurant',name:'Wiener Schnitzel mit Pommes',portion:'1 Teller (~450g)',kcal:820,ew:38,fett:42,kh:68,type:'builtin',kcal100:182,ew100:8,fett100:9,kh100:15},
+  {id:'rs41',cat:'Restaurant',name:'Wiener Schnitzel mit Salat',portion:'1 Teller (~380g)',kcal:560,ew:36,fett:30,kh:30,type:'builtin',kcal100:147,ew100:9,fett100:8,kh100:8},
+  {id:'rs42',cat:'Restaurant',name:'Schnitzel mit Kartoffeln',portion:'1 Teller (~450g)',kcal:680,ew:38,fett:28,kh:62,type:'builtin',kcal100:151,ew100:8,fett100:6,kh100:14},
 ];
 const SPORT_DB=[
   {name:'Spaziergang (langsam)',met:2.8,kat:'Gehen'},
+  {name:'Aquafit / Aqua-Aerobic (moderat)',met:5.0,kat:'Wasser'},
+  {name:'Aquafit / Aqua-Aerobic (intensiv)',met:6.5,kat:'Wasser'},
+  {name:'Schwimmen (moderat)',met:6.0,kat:'Wasser'},
+  {name:'Schwimmen (intensiv)',met:8.0,kat:'Wasser'},
+  {name:'Wassergymnastik',met:4.0,kat:'Wasser'},
   {name:'Spaziergang (zügig)',met:3.8,kat:'Gehen'},
   {name:'Nordic Walking',met:5.0,kat:'Gehen'},
   {name:'Joggen (leicht)',met:7.0,kat:'Laufen'},
@@ -582,31 +672,340 @@ let customMeals=ls('ep_custom',[]);
 let rezepte=ls('ep_rezepte',[]);
 let sportLog=ls('ep_sport',{});
 
-// Auto-merge FB-Rezepte on startup
-(function initFBRezepte(){
-  const existingIds=new Set(rezepte.map(r=>r.id));
-  let added=false;
-  BUILTIN_REZEPTE.forEach(r=>{if(!existingIds.has(r.id)){rezepte.push(r);added=true;}});
-  if(added)save();
-})();
 let water=ls('ep_water',{});
 
-if(weights.length===0){
-  const base=new Date('2025-01-06');
-  [120,119.5,119,118.4,117.9,117.2,116.8,116.1,115.6,114.9,114.2,113.7].forEach((w,i)=>{
-    const d=new Date(base);d.setDate(d.getDate()+i*7);
-    weights.push({date:d.toISOString().slice(0,10),w});
-  });
+// Gewichtsdaten werden manuell eingetragen
+
+function save(){ss('ep_profile',profile);ss('ep_days',days);ss('ep_weights',weights);ss('ep_custom',customMeals);ss('ep_rezepte',rezepte);ss('ep_mounjaro',mounjaro);ss('ep_favoriten',favoriten);ss('ep_wochenplan',sheetWochenplan);ss('ep_sport',sportLog);ss('ep_water',water);}
+
+
+// ── FAVORITEN ─────────────────────────────────────────────────────────────────
+function toggleFavorit(id){
+  const idx=favoriten.indexOf(id);
+  if(idx>=0)favoriten.splice(idx,1);
+  else favoriten.unshift(id);
+  save();
+}
+window.toggleFavorit=toggleFavorit;
+
+function isFavorit(id){return favoriten.includes(id);}
+
+// ── GOOGLE SHEETS VERBINDUNG ──────────────────────────────────────────────────
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbypvKIjlzxD3BtPxZv4FCGaLQHOkxcoX9uUX2nKHW_drG4s-ENHrTKW97W0ygo7_nIr/exec';
+let sheetsLoaded = false;
+let sheetsMeals = [];
+let sheetsRezepte = [];
+
+async function loadFromSheets() {
+  // Öffnet Sheets-URL in neuem Tab, Daten werden über localStorage übergeben
+  // Nutzer muss einmal auf Sync tippen
+  try {
+    const cached = localStorage.getItem('ep_sheets_cache');
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed.meals) sheetsMeals = parsed.meals;
+      if (parsed.rezepte) sheetsRezepte = parsed.rezepte;
+      sheetsLoaded = true;
+      showSyncBadge(sheetsMeals.length + sheetsRezepte.length);
+    }
+  } catch(e) {
+    console.warn('Cache-Fehler:', e);
+  }
 }
 
-function save(){ss('ep_profile',profile);ss('ep_days',days);ss('ep_weights',weights);ss('ep_custom',customMeals);ss('ep_rezepte',rezepte);ss('ep_sport',sportLog);ss('ep_water',water);}
+function syncWithSheets() {
+  const syncBtn = document.getElementById('sync-btn');
+  if (syncBtn) {
+    syncBtn.textContent = '⏳ Lädt...';
+    syncBtn.disabled = true;
+  }
+
+  // Öffne Sheets als neue URL mit fetch über Redirect-Trick
+  const urlL = SHEETS_URL + '?action=getLebensmittel';
+  const urlR = SHEETS_URL + '?action=getRezepte';
+
+  Promise.all([
+    fetch(urlL).then(r => r.json()).catch(() => null),
+    fetch(urlR).then(r => r.json()).catch(() => null)
+  ]).then(([dataL, dataR]) => {
+    let countL = 0, countR = 0;
+
+    if (dataL && dataL.status === 'ok' && dataL.data) {
+      sheetsMeals = dataL.data.map(r => ({
+        id: r.id || 'gs'+Math.random(),
+        cat: r.kategorie || 'Sonstiges',
+        name: r.name || '',
+        portion: r.portion || '',
+        kcal: +r.kcal || 0,
+        ew: +r.ew || 0,
+        fett: +r.fett || 0,
+        kh: +r.kh || 0,
+        kcal100: +r.kcal100 || 0,
+        ew100: +r.ew100 || 0,
+        fett100: +r.fett100 || 0,
+        kh100: +r.kh100 || 0,
+        type: 'sheets'
+      }));
+      countL = sheetsMeals.length;
+    }
+
+    if (dataR && dataR.status === 'ok' && dataR.data) {
+      sheetsRezepte = dataR.data.map(r => ({
+        id: r.id || 'gr'+Math.random(),
+        name: r.name || '',
+        cat: r.kategorie || 'Mittagessen',
+        portionen: +r.portionen || 1,
+        kcal: +r.kcal || 0,
+        ew: +r.ew || 0,
+        fett: +r.fett || 0,
+        kh: +r.kh || 0,
+        desc: r.beschreibung || '',
+        zutaten: Array.isArray(r.zutaten) ? r.zutaten : [],
+        portion: '1 von ' + (r.portionen||1) + ' Port.',
+        type: 'rezept'
+      }));
+      countR = sheetsRezepte.length;
+    }
+
+    // Cache speichern
+    try {
+      localStorage.setItem('ep_sheets_cache', JSON.stringify({
+        meals: sheetsMeals,
+        rezepte: sheetsRezepte,
+        ts: Date.now()
+      }));
+    } catch(e) {}
+
+    // Wochenplan laden
+    fetch(SHEETS_URL + '?action=getWochenplan')
+      .then(r=>r.json())
+      .then(wpData=>{
+        if(wpData.status==='ok'&&wpData.data){
+          sheetWochenplan=wpData.data;
+          save();
+          refresh();
+          console.log('Wochenplan geladen');
+        }
+      }).catch(e=>console.warn('Wochenplan:',e));
+
+    sheetsLoaded = true;
+    const total = countL + countR;
+    showSyncBadge(total);
+
+    if (syncBtn) {
+      syncBtn.textContent = total > 0 ? '✅ ' + total + ' geladen' : '⚠️ Leer';
+      syncBtn.disabled = false;
+      setTimeout(() => {
+        if (syncBtn) syncBtn.textContent = '🔄 Sync';
+      }, 3000);
+    }
+    refresh();
+
+  }).catch(e => {
+    console.warn('Sync fehlgeschlagen:', e);
+    if (syncBtn) {
+      syncBtn.textContent = '❌ Fehler';
+      syncBtn.disabled = false;
+      setTimeout(() => { if(syncBtn) syncBtn.textContent = '🔄 Sync'; }, 3000);
+    }
+  });
+}
+window.syncWithSheets = syncWithSheets;
+
+
+window.importPlanDay=function(dk,dayName){
+  const plan=sheetWochenplan[dayName];
+  console.log('importPlanDay:', dk, dayName, plan);
+  if(!plan){alert('Kein Plan für '+dayName+' gefunden.');return;}
+  if(!confirm('Wochenplan für heute übernehmen? Bestehende Einträge bleiben erhalten.'))return;
+  
+  const slots=['fruehstueck','mittagessen','abendessen','snack'];
+  const slotMap={fruehstueck:'fruehstueck',mittagessen:'mittagessen',abendessen:'abendessen',snack:'snacks'};
+  const labelMap={fruehstueck:'Frühstück',mittagessen:'Mittagessen',abendessen:'Abendessen',snack:'Snack'};
+  
+  if(!days[dk])days[dk]={};
+  
+  slots.forEach(slot=>{
+    const name=plan[slot];
+    if(!name)return;
+    const appSlot=slotMap[slot];
+    if(!Array.isArray(days[dk][appSlot]))days[dk][appSlot]=[];
+    
+    // Lebensmittel in allMeals suchen
+    const found=allMeals().find(m=>m.name.toLowerCase().includes(name.toLowerCase())||name.toLowerCase().includes(m.name.toLowerCase()));
+    if(found){
+      days[dk][appSlot].push({...found});
+    } else {
+      // Als unbekanntes Element hinzufügen
+      days[dk][appSlot].push({
+        id:'wp'+Date.now()+Math.random(),
+        name:name,
+        cat:'Geplant',
+        portion:'1 Portion (Wochenplan)',
+        kcal:0,ew:0,fett:0,kh:0,
+        type:'plan'
+      });
+    }
+  });
+  
+  save();refresh();
+  
+  const c=document.createElement('div');
+  c.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#8E44AD;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;z-index:999;white-space:nowrap';
+  c.textContent='📋 Wochenplan übernommen!';
+  document.body.appendChild(c);
+  setTimeout(()=>c.remove(),3000);
+};
+window.repeatYesterday=function(dk){
+  const yesterday=new Date(dk);
+  yesterday.setDate(yesterday.getDate()-1);
+  const yk=yesterday.toISOString().slice(0,10);
+  const src=days[yk];
+  if(!src){
+    alert('Kein Eintrag von gestern gefunden.');
+    return;
+  }
+  if(confirm('Alle Mahlzeiten von gestern für heute übernehmen?')){
+    if(!days[dk])days[dk]={};
+    ['fruehstueck','mittagessen','abendessen','snacks'].forEach(slot=>{
+      if(src[slot]&&src[slot].length>0){
+        days[dk][slot]=[...src[slot].map(m=>({...m}))];
+      }
+    });
+    save();refresh();
+  }
+};
+
+
+function showSyncBadge(count) {
+  const badge = document.getElementById('sync-badge');
+  if (badge && count > 0) {
+    badge.textContent = count + ' aus Sheets';
+    badge.style.display = 'inline-block';
+  }
+}
+
+async function saveTagebuch(dk) {
+  const d = getDay(dk);
+  if (!d) return;
+  const t = targets();
+
+  // Mahlzeiten zusammenfassen
+  const fruehstueck = (d.fruehstueck||[]).map(m=>m.name).join(', ');
+  const mittagessen = (d.mittagessen||[]).map(m=>m.name).join(', ');
+  const abendessen  = (d.abendessen||[]).map(m=>m.name).join(', ');
+  const snacks      = (d.snacks||[]).map(m=>m.name).join(', ');
+
+  function sum(slot, key) {
+    return (d[slot]||[]).reduce((a,m)=>a+(+m[key]||0), 0);
+  }
+
+  const payload = {
+    action: 'addTagebuch',
+    datum: dk,
+    fruehstueck: fruehstueck,
+    fruehstueck_kcal: sum('fruehstueck','kcal'),
+    fruehstueck_ew:   sum('fruehstueck','ew'),
+    fruehstueck_fett: sum('fruehstueck','fett'),
+    fruehstueck_kh:   sum('fruehstueck','kh'),
+    mittagessen: mittagessen,
+    mittagessen_kcal: sum('mittagessen','kcal'),
+    mittagessen_ew:   sum('mittagessen','ew'),
+    mittagessen_fett: sum('mittagessen','fett'),
+    mittagessen_kh:   sum('mittagessen','kh'),
+    abendessen: abendessen,
+    abendessen_kcal: sum('abendessen','kcal'),
+    abendessen_ew:   sum('abendessen','ew'),
+    abendessen_fett: sum('abendessen','fett'),
+    abendessen_kh:   sum('abendessen','kh'),
+    snack: snacks,
+    snack_kcal: sum('snacks','kcal'),
+    snack_ew:   sum('snacks','ew'),
+    snack_fett: sum('snacks','fett'),
+    snack_kh:   sum('snacks','kh'),
+    summe_kcal: sum('fruehstueck','kcal')+sum('mittagessen','kcal')+sum('abendessen','kcal')+sum('snacks','kcal'),
+    summe_ew:   sum('fruehstueck','ew')+sum('mittagessen','ew')+sum('abendessen','ew')+sum('snacks','ew'),
+    summe_fett: sum('fruehstueck','fett')+sum('mittagessen','fett')+sum('abendessen','fett')+sum('snacks','fett'),
+    summe_kh:   sum('fruehstueck','kh')+sum('mittagessen','kh')+sum('abendessen','kh')+sum('snacks','kh'),
+    gewicht: weights.length ? weights[weights.length-1].w : '',
+    sport: (sportLog[dk]||[]).map(s=>s.name).join(', '),
+    notizen: ''
+  };
+
+  try {
+    await fetch(SHEETS_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {'Content-Type': 'text/plain'},
+      body: JSON.stringify(payload)
+    });
+    // Bestätigung anzeigen
+    const confirm = document.createElement('div');
+    confirm.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1D9E75;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;z-index:999;white-space:nowrap';
+    confirm.textContent = '📊 Tag ' + dk + ' ins Tagebuch gespeichert!';
+    document.body.appendChild(confirm);
+    setTimeout(() => confirm.remove(), 3000);
+  } catch(e) {
+    console.warn('Tagebuch-Speichern fehlgeschlagen:', e);
+  }
+}
+window.saveTagebuch = saveTagebuch;
+
+async function saveToSheets(item, type) {
+  try {
+    const payload = type === 'lebensmittel' ? {
+      action: 'addLebensmittel',
+      kategorie: item.cat,
+      name: item.name,
+      portion: item.portion,
+      kcal: item.kcal,
+      ew: item.ew,
+      fett: item.fett,
+      kh: item.kh,
+      kcal100: item.kcal100||0,
+      ew100: item.ew100||0,
+      fett100: item.fett100||0,
+      kh100: item.kh100||0
+    } : {
+      action: 'addRezept',
+      name: item.name,
+      kategorie: item.cat,
+      portionen: item.portionen||1,
+      kcal: item.kcal,
+      ew: item.ew,
+      fett: item.fett,
+      kh: item.kh,
+      beschreibung: item.desc||'',
+      zutaten: item.zutaten||[]
+    };
+
+    // no-cors: Schreiben funktioniert, Antwort kann nicht gelesen werden (CORS)
+    await fetch(SHEETS_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {'Content-Type': 'text/plain'},
+      body: JSON.stringify(payload)
+    });
+    console.log('In Sheets gespeichert (no-cors)');
+    return 'saved';
+  } catch(e) {
+    console.warn('Sheets-Speichern fehlgeschlagen:', e);
+  }
+  return null;
+}
+
 function allMeals(){
-  return[...BUILTIN,...customMeals,...rezepte].map(m=>{
-    // Ensure kcal100 is available for portion scaling
+  const all=[...BUILTIN,...sheetsMeals,...customMeals,...rezepte,...sheetsRezepte].map(m=>{
     if(!m.kcal100&&m.kcal&&m.g){
       return{...m,kcal100:Math.round(m.kcal/m.g*100),ew100:Math.round(m.ew/m.g*100),fett100:Math.round(m.fett/m.g*100),kh100:Math.round(m.kh/m.g*100)};
     }
     return m;
+  });
+  // Favoriten zuerst
+  return all.sort((a,b)=>{
+    const af=favoriten.includes(a.id)?1:0;
+    const bf=favoriten.includes(b.id)?1:0;
+    return bf-af;
   });
 }
 function todayKey(){return new Date().toISOString().slice(0,10);}
@@ -617,7 +1016,7 @@ function targets(w){
   const p=profile,wt=w||p.gewicht;
   const gu=447.6+(9.2*wt)+(3.1*p.groesse)-(4.3*p.alter);
   const zk=Math.round(gu*p.aktivitaet-500);
-  const ew=Math.round(wt*1.3);
+  const ew=Math.round(Math.min(wt,80)*1.6);  // Eiweißziel auf Zielgewicht ~78-80kg basiert → ~130g
   const fett=Math.round(zk*0.28/9);
   const kh=Math.round((zk-(ew*4)-(fett*9))/4);
   return{zk,ew,fett,kh};
@@ -686,15 +1085,38 @@ function renderWaterWidget(dk){
       <button onclick="resetWater('${dk}')" style="padding:8px 10px;border:1px solid #eee;border-radius:8px;background:none;cursor:pointer;font-size:11px;color:#aaa">Reset</button>
     </div>`;
 }
+function calcStreak(t){
+  let streak=0;
+  const today=new Date();
+  for(let i=1;i<=365;i++){
+    const d=new Date(today);
+    d.setDate(d.getDate()-i);
+    const dk2=d.toISOString().slice(0,10);
+    const day=days[dk2];
+    if(!day)break;
+    const tot2=dayTotals(dk2);
+    if(tot2.kcal>=t.zk*0.7&&tot2.kcal<=t.zk*1.2)streak++;
+    else break;
+  }
+  return streak;
+}
+
 function renderDay(sid,dk,label){
   const el=document.getElementById(sid);
   const t=targets(),tot=dayTotals(dk),d=getDay(dk);
   const net=Math.max(0,tot.kcal),kp=Math.min(net/t.zk,1.15),ep=Math.min(tot.ew/t.ew,1.15);
   const wml=getWaterMl(dk),wgoal=2000,wpct=Math.min(wml/wgoal,1);
   const wcol=wpct>=1?'#1D9E75':wpct>=0.6?'#185FA5':'#E24B4A';
+  const streak=sid==='heute'?calcStreak(t):0;
   let html=`<div class="card">
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
-      <div><div class="label">${label} – Nettokalorien</div><span class="big-num">${net}</span> <span style="font-size:13px;color:#888">/ ${t.zk} kcal</span></div>
+      <div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="label">${label} – Nettokalorien</div>
+          ${streak>0?`<span style="background:#FEF9E7;border:1px solid #F39C12;border-radius:99px;padding:2px 7px;font-size:10px;font-weight:600;color:#E67E22">🔥 ${streak} Tage</span>`:''}
+        </div>
+        <span class="big-num">${net}</span> <span style="font-size:13px;color:#888">/ ${t.zk} kcal</span>
+      </div>
       ${tot.sportKcal>0?`<span style="font-size:12px;color:#1D9E75;font-weight:500">Sport −${tot.sportKcal}</span>`:''}
     </div>
     <div class="bar-wrap"><div class="bar-fill" style="width:${Math.round(kp*100)}%;background:${barCol(kp)}"></div></div>
@@ -723,8 +1145,8 @@ function renderDay(sid,dk,label){
       html+=`<div class="card" style="padding:4px 14px">`;
       items.forEach((e,i)=>{
         html+=`<div class="meal-row">
-          <div class="meal-info">
-            <div class="meal-name">${e.name}</div>
+          <div class="meal-info" onclick="editPortion('${dk}','${slot}',${i})" style="cursor:pointer" title="Tippen zum Anpassen">
+            <div class="meal-name">${e.name} <span style="font-size:10px;color:#aaa">✏️</span></div>
             <div class="meal-macro">${e.portion||''} · ${e.kcal} kcal · EW ${e.ew}g · F ${e.fett}g · KH ${e.kh}g</div>
           </div>
           <button class="del-btn" onclick="removeSlotItem('${dk}','${slot}',${i})">×</button>
@@ -735,17 +1157,93 @@ function renderDay(sid,dk,label){
     html+=`<button class="add-btn" onclick="openPicker('${dk}','${slot}','${lbl}')">+ ${lbl} hinzufügen</button>`;
   });
   html+=`<div class="section-head">Snacks & Naschen${d.snacks.length?`<span style="font-size:11px;color:#888;margin-left:auto">${d.snacks.reduce((a,s)=>a+s.kcal,0)} kcal</span>`:''}</div>`;
-  if(d.snacks.length){html+=`<div class="card" style="padding:4px 14px">`;d.snacks.forEach((s,i)=>{html+=`<div class="meal-row"><div class="meal-info"><div class="meal-name">${s.name}</div><div class="meal-macro">EW ${s.ew}g · F ${s.fett}g · KH ${s.kh}g</div></div><span style="font-size:13px;font-weight:500;white-space:nowrap">${s.kcal}</span><button class="del-btn" onclick="removeSnack('${dk}',${i})">×</button></div>`;});html+=`</div>`;}
+  if(d.snacks.length){html+=`<div class="card" style="padding:4px 14px">`;d.snacks.forEach((s,i)=>{html+=`<div class="meal-row"><div class="meal-info" onclick="editPortion('${dk}','snacks',${i})" style="cursor:pointer"><div class="meal-name">${s.name} <span style="font-size:10px;color:#aaa">✏️</span></div><div class="meal-macro">${s.portion||''} · ${s.kcal} kcal · EW ${s.ew}g · F ${s.fett}g · KH ${s.kh}g</div></div><span style="font-size:13px;font-weight:500;white-space:nowrap;cursor:pointer" onclick="editPortion('${dk}','snacks',${i})">${s.kcal}</span><button class="del-btn" onclick="removeSnack('${dk}',${i})">×</button></div>`;});html+=`</div>`;}
   html+=`<button class="add-btn" onclick="openSnack('${dk}')">+ Snack / Naschen</button>`;
   const sl=sportLog[dk]||[];
   if(sl.length){html+=`<div class="section-head">Sport<span style="font-size:11px;color:#1D9E75;margin-left:auto">−${sportDayTotal(dk)} kcal</span></div><div class="card" style="padding:4px 14px">`;sl.forEach((e,i)=>{html+=`<div class="meal-row"><div class="meal-info"><div class="meal-name">${e.name}</div><div class="meal-macro">${e.dauer} Min.</div></div><span class="sport-kcal">−${e.kcal}</span><button class="del-btn" onclick="removeSport('${dk}',${i})">×</button></div>`;});html+=`</div>`;}
   html+=`<button class="add-btn" onclick="openSportPicker('${dk}')">+ Sport eintragen</button>`;
+  // Wochenplan aus Sheet anzeigen
+  if(sid==='heute'&&sheetWochenplan&&Object.keys(sheetWochenplan).length>0){
+    const wochentage=['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
+    const dkParts=dk.split('-');
+    const dkDate=new Date(+dkParts[0],+dkParts[1]-1,+dkParts[2]);
+    const dayName=wochentage[dkDate.getDay()];
+    const plan=sheetWochenplan[dayName];
+    if(plan&&(plan.fruehstueck||plan.mittagessen||plan.abendessen||plan.snack)){
+      html+=`<div class="section-head" style="margin-top:12px">📋 Wochenplan (aus Sheet)</div>
+      <div class="card" style="background:#F8F4FF;border:1px solid #E8D5F5">`;
+      if(plan.fruehstueck)html+=`<div style="padding:6px 0;border-bottom:1px solid #eee;font-size:13px"><span style="color:#888;font-size:11px">Frühstück</span><br>${plan.fruehstueck}</div>`;
+      if(plan.mittagessen)html+=`<div style="padding:6px 0;border-bottom:1px solid #eee;font-size:13px"><span style="color:#888;font-size:11px">Mittagessen</span><br>${plan.mittagessen}</div>`;
+      if(plan.abendessen)html+=`<div style="padding:6px 0;border-bottom:1px solid #eee;font-size:13px"><span style="color:#888;font-size:11px">Abendessen</span><br>${plan.abendessen}</div>`;
+      if(plan.snack)html+=`<div style="padding:6px 0;font-size:13px"><span style="color:#888;font-size:11px">Snack/Kaffee</span><br>${plan.snack}</div>`;
+      html+=`<button onclick="importPlanDay('${dk}','${dayName}')" style="width:100%;margin-top:10px;padding:9px;border:1px solid #8E44AD;border-radius:8px;background:none;cursor:pointer;font-size:12px;color:#8E44AD;font-weight:500">📥 Plan für heute übernehmen</button>
+      </div>`;
+    }
+  }
+  html+=`<button onclick="repeatYesterday('${dk}')" style="width:100%;margin-top:8px;padding:11px;border:1px solid #185FA5;border-radius:8px;background:#EBF5FB;cursor:pointer;font-size:13px;color:#185FA5;font-weight:500">🔄 Mahlzeiten von gestern wiederholen</button>`;
+  html+=`<button onclick="saveTagebuch('${dk}')" style="width:100%;margin-top:8px;padding:11px;border:1px solid #1D9E75;border-radius:8px;background:#F0FDF4;cursor:pointer;font-size:13px;color:#1D9E75;font-weight:500">📊 Tag ins Google Tagebuch speichern</button>`;
   if(sid==='morgen'&&days[todayKey()])html+=`<button class="secondary-btn" onclick="copyDay()">Heutigen Plan für morgen übernehmen</button>`;
   el.innerHTML=html;
   renderWaterWidget(dk);
 }
 
 function removeSlot(dk,s){getDay(dk)[s]=[];save();refresh();}
+// ── PORTION ANPASSEN ─────────────────────────────────────────────────────────
+window.editPortion=function(dk,slot,idx){
+  const d=getDay(dk);
+  if(!d||!d[slot]||!d[slot][idx])return;
+  const m=d[slot][idx];
+  const hasScale=m.kcal100&&m.kcal100>0;
+  const factors=[0.25,0.5,0.75,1,1.25,1.5];
+  const labels=['¼','½','¾','1','1¼','1½'];
+  let facHtml=factors.map((fv,i)=>`<button onclick="applyFactor('${dk}','${slot}',${idx},${fv})"
+    style="padding:8px 10px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;font-weight:500;flex:1">
+    ${labels[i]}<br><span style="font-size:10px;color:#888">${Math.round(m.kcal*fv)} kcal</span>
+  </button>`).join('');
+  document.getElementById('modal-content').innerHTML=`
+    <button class="close-btn" onclick="closeModal()">×</button>
+    <div class="modal-title">${m.name}</div>
+    <div style="background:#f8f8f8;border-radius:8px;padding:10px;margin-bottom:12px;font-size:12px;color:#888">
+      Eingetragen: ${m.portion||'–'} · ${m.kcal} kcal · EW ${m.ew}g · F ${m.fett}g
+    </div>
+    <div class="label" style="margin-bottom:8px">Faktor anpassen:</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">${facHtml}</div>
+    ${hasScale?`<div class="label" style="margin-bottom:6px">Oder Gramm eingeben:</div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+      <input class="inp" type="number" id="edit-g" placeholder="Gramm" min="1" style="margin:0;width:100px" value="${m.g||''}">
+      <span style="font-size:13px;color:#888">g</span>
+    </div>
+    <button class="primary-btn" onclick="applyGrams('${dk}','${slot}',${idx},${m.kcal100},${m.ew100||0},${m.fett100||0},${m.kh100||0})">Gramm übernehmen</button>`:''}
+  `;
+  openModal();
+};
+window.applyFactor=function(dk,slot,idx,factor){
+  const d=getDay(dk);
+  if(!d||!d[slot]||!d[slot][idx])return;
+  const m=d[slot][idx];
+  if(!m._orig)m._orig={kcal:m.kcal,ew:m.ew,fett:m.fett,kh:m.kh};
+  const o=m._orig;
+  m.kcal=Math.round(o.kcal*factor);
+  m.ew=Math.round(o.ew*factor);
+  m.fett=Math.round(o.fett*factor);
+  m.kh=Math.round(o.kh*factor);
+  m.portion=(m.portion||'').replace(/ ×[\d.]+\)/,'').replace(/ \(×[\d.]+\)/,'')+' (×'+factor+')';
+  save();closeModal();refresh();
+};
+window.applyGrams=function(dk,slot,idx,k100,e100,f100,kh100){
+  const g=parseFloat(document.getElementById('edit-g').value)||0;
+  if(!g)return;
+  const d=getDay(dk);
+  if(!d||!d[slot]||!d[slot][idx])return;
+  const m=d[slot][idx];
+  m.kcal=Math.round(k100*g/100);
+  m.ew=Math.round(e100*g/100);
+  m.fett=Math.round(f100*g/100);
+  m.kh=Math.round(kh100*g/100);
+  m.g=g;
+  m.portion=g+'g (angepasst)';
+  save();closeModal();refresh();
+};
 function removeSlotItem(dk,s,i){const arr=getDay(dk)[s];if(arr)arr.splice(i,1);save();refresh();}
 function removeSnack(dk,i){getDay(dk).snacks.splice(i,1);save();refresh();}
 function removeSport(dk,i){if(sportLog[dk])sportLog[dk].splice(i,1);save();refresh();}
@@ -758,32 +1256,81 @@ function copyDay(){
 
 function openPicker(dk,slot,lbl){
   let search='',activeCat='Alle';
-  const cats=['Alle','Frühstück','Mittagessen','Abendessen','Snack','Proteinquelle','Wurst','Beilage','Gemüse','Backwaren','Aufstrich','Süßes','Käse','Convenience','More Shakes','Eigene','Rezepte'];
+  // Store for global access
+  window._pickerDk=dk;
+  window._pickerSlot=slot;
+  const cats=['Alle','Frühstück','Mittagessen','Abendessen','Snack herzhaft','Snack süß','Snack Protein','Snack Süßes','Obst','Proteinquelle','Wurst','Beilage','Gemüse','Backwaren','Aufstrich','Käse','Convenience','Restaurant','Aus Sheets','Eigene','Rezepte'];
+  function smartScore(m,restKcal,restEw,restFett,restKh){
+    // Returns score 0-3 and color for traffic light
+    // Priority: EW > Fett > Kcal > KH
+    const kcalOk=m.kcal<=restKcal*1.1;
+    const ewOk=m.ew<=restEw+5; // small tolerance
+    const fettOk=m.fett<=restFett+3;
+    if(kcalOk&&ewOk&&fettOk)return{score:3,color:'#1D9E75',bg:'#F0FDF4',label:'passt gut'};
+    if(kcalOk&&fettOk)return{score:2,color:'#E67E22',bg:'#FFF8F0',label:'EW leicht hoch'};
+    if(kcalOk)return{score:1,color:'#E67E22',bg:'#FEF9E7',label:'Fett/EW prüfen'};
+    return{score:0,color:'#E24B4A',bg:'#FFF5F5',label:'über Budget'};
+  }
   function renderList(){
+    const tot=dayTotals(dk);
+    const t=targets();
+    const restKcal=Math.max(0,t.zk-tot.kcal);
+    const restEw=Math.max(0,t.ew-tot.ew);
+    const restFett=Math.max(0,t.fett-tot.fett);
+    const restKh=Math.max(0,t.kh-tot.kh);
     const filtered=allMeals().filter(m=>{
       const cok=activeCat==='Alle'
         ||(activeCat==='Eigene'&&m.type==='custom')
         ||(activeCat==='Rezepte'&&m.type==='rezept')
-        ||(activeCat==='More Shakes'&&m.id&&(m.id.startsWith('m')||String(m.id).startsWith('m')))
         ||(activeCat==='Wurst'&&m.cat==='Wurst')
+        ||(activeCat==='Aus Sheets'&&(m.type==='sheets'))
         ||m.cat===activeCat;
       return cok&&(!search||m.name.toLowerCase().includes(search.toLowerCase()));
     });
+    // Sort: best fit first
+    const scored=filtered.map(m=>({m,s:smartScore(m,restKcal,restEw,restFett,restKh)}));
+    scored.sort((a,b)=>b.s.score-a.s.score);
     const listEl=document.getElementById('picker-list');
     if(!listEl)return;
     const catEl=document.getElementById('picker-cats');
     if(catEl)catEl.innerHTML=cats.map(c=>`<button class="cat-btn${activeCat===c?' active':''}" onclick="pCat('${c}')">${c}</button>`).join('');
-    listEl.innerHTML=filtered.map(m=>`<div class="food-item" onclick="pickMeal('${m.id}')">
-      <div style="flex:1"><div class="food-name">${m.name}${m.type==='rezept'?' <span class="food-badge badge-r">Rezept</span>':m.type==='custom'?' <span class="food-badge badge-e">Eigen</span>':''}</div>
-      <div class="food-detail">${m.portion||''} · EW ${m.ew}g · F ${m.fett}g · KH ${m.kh}g</div></div>
-      <span class="food-kcal">${m.kcal}</span></div>`).join('')
-      +(filtered.length===0?'<div class="empty-state">Keine Treffer</div>':'');
+    // Budget bar at top
+    const budgetHtml=`<div style="background:#f8f8f8;border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:11px;color:#888">
+      <span style="margin-right:10px">noch frei:</span>
+      <span style="color:#111;font-weight:500">${restKcal} kcal</span>
+      <span style="margin:0 6px">·</span>
+      <span style="color:#378ADD;font-weight:500">EW ${restEw}g</span>
+      <span style="margin:0 6px">·</span>
+      <span style="color:#E67E22;font-weight:500">Fett ${restFett}g</span>
+      <span style="margin:0 6px">·</span>
+      <span style="color:#8E44AD;font-weight:500">KH ${restKh}g</span>
+    </div>`;
+    listEl.innerHTML=budgetHtml+scored.map(({m,s})=>`
+      <div class="food-item" style="background:${s.bg};border-left:3px solid ${s.color};padding-left:8px;margin-bottom:2px;border-radius:0 6px 6px 0">
+        <div style="flex:1" onclick="pickMeal('${m.id}')">
+          <div class="food-name">${isFavorit(m.id)?'⭐ ':''}${m.name}${m.type==='rezept'?' <span class="food-badge badge-r">Rezept</span>':m.type==='custom'?' <span class="food-badge badge-e">Eigen</span>':m.type==='sheets'?' <span class="food-badge" style="background:#EBF5FB;color:#185FA5">Sheets</span>':''}</div>
+          <div class="food-detail">${m.portion||''} · <strong>${m.kcal} kcal</strong> · EW ${m.ew}g · F ${m.fett}g · KH ${m.kh}g</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0">
+          <button onclick="toggleFavorit('${m.id}');renderList();" style="background:none;border:none;font-size:18px;cursor:pointer;padding:0;line-height:1">${isFavorit(m.id)?'⭐':'☆'}</button>
+          <div style="font-size:11px;color:${s.color}">${s.label}</div>
+        </div>
+      </div>`).join('')
+      +(scored.length===0?'<div class="empty-state">Keine Treffer</div>':'');
   }
   function render(){
     document.getElementById('modal-content').innerHTML=`
       <button class="close-btn" onclick="closeModal()">×</button>
-      <div class="modal-title">${lbl} wählen</div>
-      <input class="inp" type="text" placeholder="Suchen..." id="ps" oninput="pSrch(this.value)">
+      <div class="modal-title">${lbl} hinzufügen</div>
+      <div style="font-size:11px;color:#888;margin-bottom:8px">🟢 passt gut &nbsp; 🟡 prüfen &nbsp; 🔴 über Budget – trotzdem wählbar</div>
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <input class="inp" style="margin:0;flex:1" type="text" placeholder="Suchen..." id="ps" oninput="pSrch(this.value)">
+        <button onclick="openMealScanner('${dk}','${slot}')" style="padding:10px 12px;border:1px solid #1D9E75;border-radius:8px;background:#F0FDF4;cursor:pointer;font-size:16px" title="Barcode scannen">📷</button>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <button onclick="searchOFFMeal(window._pickerDk,window._pickerSlot)" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;background:none;cursor:pointer;font-size:12px;color:#666">🔍 Online suchen</button>
+        <button onclick="showManualEntry(window._pickerDk,window._pickerSlot)" style="flex:1;padding:8px;border:1px dashed #888;border-radius:8px;background:none;cursor:pointer;font-size:12px;color:#666">✏️ Manuell</button>
+      </div>
       <div class="cat-filter" id="picker-cats"></div>
       <div id="picker-list"></div>`;
     renderList();
@@ -851,12 +1398,25 @@ function openPicker(dk,slot,lbl){
 }
 
 function openSnack(dk){
-  let search='';
+  let search='',snackCat='Alle';
+  const snackCats=['Alle','Snack herzhaft','Snack süß','Snack Protein','Snack Süßes','Obst','Frühstück','Proteinquelle','Eigene','Aus Sheets'];
   function renderSnackList(){
-    const filtered=allMeals().filter(m=>!search||m.name.toLowerCase().includes(search.toLowerCase()));
+    const filtered=allMeals().filter(m=>{
+      const cok=snackCat==='Alle'||m.cat===snackCat||(snackCat==='Aus Sheets'&&m.type==='sheets')||(snackCat==='Eigene'&&m.type==='custom');
+      return cok&&(!search||m.name.toLowerCase().includes(search.toLowerCase()));
+    });
     const el=document.getElementById('snack-list');
-    if(el)el.innerHTML=filtered.map(m=>`<div class="food-item" onclick="pickSnk('${m.id}')"><div style="flex:1"><div class="food-name">${m.name}</div><div class="food-detail">EW ${m.ew}g · F ${m.fett}g · KH ${m.kh}g</div></div><span class="food-kcal">${m.kcal}</span></div>`).join('');
+    const catEl=document.getElementById('snack-cats');
+    if(catEl)catEl.innerHTML=snackCats.map(c=>`<button class="cat-btn${snackCat===c?' active':''}" onclick="snkCat('${c}')">${c}</button>`).join('');
+    if(el)el.innerHTML=filtered.map(m=>`<div class="food-item" style="display:flex;align-items:center">
+        <div style="flex:1" onclick="pickSnk('${m.id}')">
+          <div class="food-name">${isFavorit(m.id)?'⭐ ':''}${m.name}</div>
+          <div class="food-detail">EW ${m.ew}g · F ${m.fett}g · KH ${m.kh}g · ${m.kcal} kcal</div>
+        </div>
+        <button onclick="toggleFavorit('${m.id}');renderSnackList();" style="background:none;border:none;font-size:18px;cursor:pointer;padding:0 4px">${isFavorit(m.id)?'⭐':'☆'}</button>
+      </div>`).join('');
   }
+  window.snkCat=c=>{snackCat=c;renderSnackList();};
   function render(){
     document.getElementById('modal-content').innerHTML=`
       <button class="close-btn" onclick="closeModal()">×</button>
@@ -867,10 +1427,11 @@ function openSnack(dk){
       <button class="primary-btn" onclick="addManSnack()">Eintragen</button>
       <div class="label" style="margin:14px 0 6px">Aus Liste</div>
       <input class="inp" type="text" placeholder="Suchen..." oninput="snkS(this.value)">
+      <div class="cat-filter" id="snack-cats"></div>
       <div id="snack-list"></div>`;
     renderSnackList();
   }
-  window.snkS=v=>{search=v;renderSnackList();};
+  window.snkS=v=>{search=v;snackCat='Alle';renderSnackList();};
   window.addManSnack=()=>{
     const name=document.getElementById('sn').value||'Snack';
     getDay(dk).snacks.push({name,kcal:+document.getElementById('sk').value||0,ew:+document.getElementById('se').value||0,fett:+document.getElementById('sf').value||0,kh:+document.getElementById('skh').value||0,portion:''});
@@ -917,6 +1478,11 @@ function renderGewicht(){
   document.getElementById('gewicht').innerHTML=`
     <div class="card">
       <div class="label">Gewicht eintragen</div>
+      <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
+        <span style="font-size:12px;color:#888">Datum:</span>
+        <input type="date" id="w-date" value="${todayKey()}"
+          style="font-size:13px;padding:6px 8px;border:1px solid #ddd;border-radius:8px;background:#f8f8f8;color:#111;flex:1">
+      </div>
       <div style="display:flex;align-items:center;gap:10px;margin:10px 0">
         <input type="number" id="w-inp" value="${profile.gewicht}" step="0.1" min="30" max="300" oninput="previewW(this.value)"
           style="font-size:28px;font-weight:500;width:130px;text-align:center;padding:10px;border:1px solid #ddd;border-radius:8px;background:#f8f8f8;color:#111">
@@ -942,6 +1508,16 @@ function renderGewicht(){
       ${hist.map((e,i)=>{const diff=i<hist.length-1?e.w-hist[i+1].w:null;return`<div class="hist-row"><span class="hist-date">${fmtDate(e.date)}</span><span class="hist-w">${e.w.toFixed(1)} kg</span>${diff!==null?`<span class="hist-diff ${diff<0?'diff-neg':'diff-pos'}">${diff>0?'+':''}${diff.toFixed(1)} kg</span>`:'<span class="hist-diff" style="color:#888">Start</span>'}</div>`;}).join('')}
     </div>`;
   previewW(profile.gewicht);drawChart();
+  // Reset Button
+  const resetBtn=document.createElement('button');
+  resetBtn.textContent='🗑️ Alle Gewichtsdaten löschen und neu starten';
+  resetBtn.style.cssText='width:100%;margin-top:16px;padding:10px;border:1px solid #E24B4A;border-radius:8px;background:none;cursor:pointer;font-size:12px;color:#E24B4A';
+  resetBtn.onclick=function(){
+    if(confirm('Alle Gewichtsdaten wirklich löschen?')){
+      weights=[];save();renderGewicht();
+    }
+  };
+  document.getElementById('gewicht').appendChild(resetBtn);
 }
 
 window.previewW=v=>{const val=parseFloat(v);if(isNaN(val)||val<30)return;const t=targets(val);const el=document.getElementById('w-preview');if(el)el.innerHTML=`Neue Ziele: <strong>${t.zk} kcal</strong> · EW <strong>${t.ew}g</strong> · Fett <strong>${t.fett}g</strong>`;};
@@ -950,10 +1526,15 @@ window.setRange=r=>{chartRange=r;renderGewicht();};
 function logWeight(){
   const val=parseFloat(document.getElementById('w-inp').value);
   if(isNaN(val)||val<30)return;
-  profile.gewicht=Math.round(val*10)/10;
-  const today=todayKey();
-  const idx=weights.findIndex(e=>e.date===today);
-  if(idx>=0)weights[idx].w=profile.gewicht;else weights.push({date:today,w:profile.gewicht});
+  const dateEl=document.getElementById('w-date');
+  const dateVal=dateEl?dateEl.value:todayKey();
+  // Update profile only if today
+  if(dateVal===todayKey()) profile.gewicht=Math.round(val*10)/10;
+  const idx=weights.findIndex(e=>e.date===dateVal);
+  if(idx>=0)weights[idx].w=Math.round(val*10)/10;
+  else weights.push({date:dateVal,w:Math.round(val*10)/10});
+  // Sort by date
+  weights.sort((a,b)=>a.date.localeCompare(b.date));
   save();renderGewicht();refresh();
 }
 
@@ -1022,7 +1603,7 @@ function renderDbContent(){
       <button onclick="openBarcodeScanner()" style="padding:11px 16px;border:1px dashed #1D9E75;border-radius:8px;background:none;cursor:pointer;font-size:22px;color:#1D9E75" title="Barcode scannen">⬛</button>
     </div>`;
     if(!customMeals.length&&!rezepte.length)html+=`<div class="empty-state">Noch leer – Mahlzeiten und Rezepte erscheinen hier und in der Auswahl.</div>`;
-    if(rezepte.length){html+=`<div class="section-head">Rezepte</div><div class="card" style="padding:4px 14px">`;rezepte.forEach((r,i)=>{html+=`<div class="meal-row"><div class="meal-info"><div class="meal-name">${r.name} <span class="food-badge badge-r">Rezept</span></div><div class="meal-macro">${r.cat} · EW ${r.ew}g · F ${r.fett}g · KH ${r.kh}g</div></div><span style="font-size:13px;font-weight:500">${r.kcal}</span><button class="del-btn" onclick="delR(${i})">×</button></div>`;});html+=`</div>`;}
+    if(rezepte.filter(r=>r.type==='rezept'||r.portionen).length){html+=`<div class="section-head">Rezepte</div><div class="card" style="padding:4px 14px">`;rezepte.forEach((r,i)=>{if(r.type!=='rezept'&&!r.portionen)return;html+=`<div class="meal-row"><div class="meal-info"><div class="meal-name">${r.name} <span class="food-badge badge-r">Rezept</span></div><div class="meal-macro">${r.cat} · EW ${r.ew}g · F ${r.fett}g · KH ${r.kh}g</div></div><span style="font-size:13px;font-weight:500">${r.kcal}</span><button onclick="editRezept(${i})" style="background:none;border:none;color:#185FA5;font-size:16px;cursor:pointer;padding:0 4px" title="Bearbeiten">✏️</button><button class="del-btn" onclick="delR(${i})">×</button></div>`;});html+=`</div>`;}
     if(customMeals.length){html+=`<div class="section-head">Eigene Mahlzeiten</div><div class="card" style="padding:4px 14px">`;customMeals.forEach((m,i)=>{html+=`<div class="meal-row"><div class="meal-info"><div class="meal-name">${m.name} <span class="food-badge badge-e">Eigen</span></div><div class="meal-macro">${m.cat} · EW ${m.ew}g · F ${m.fett}g · KH ${m.kh}g</div></div><span style="font-size:13px;font-weight:500">${m.kcal}</span><button class="del-btn" onclick="delC(${i})">×</button></div>`;});html+=`</div>`;}
     el.innerHTML=html;
   } else {
@@ -1047,9 +1628,334 @@ function renderDbContent(){
 }
 
 
+
+
+
+window.searchOFFMeal=function(dk,slot){
+  document.getElementById('modal-content').innerHTML=`
+    <button class="close-btn" onclick="closeModal()">×</button>
+    <div class="modal-title">Online suchen</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <input class="inp" style="margin:0;flex:1" type="text" id="off-search-inp" placeholder="Produktname eingeben..." onkeydown="if(event.key==='Enter')doOFFMealSearch('${dk}','${slot}')">
+      <button class="primary-btn" style="margin:0;white-space:nowrap" onclick="doOFFMealSearch('${dk}','${slot}')">Suchen</button>
+    </div>
+    <div id="off-meal-results"></div>`;
+  openModal();
+  setTimeout(()=>{const i=document.getElementById('off-search-inp');if(i)i.focus();},50);
+};
+
+window.doOFFMealSearch=async function(dk,slot){
+  const q=document.getElementById('off-search-inp').value;
+  if(!q)return;
+  const el=document.getElementById('off-meal-results');
+  if(el)el.innerHTML='<div style="text-align:center;padding:20px;color:#888">Suche...</div>';
+  try{
+    const res=await fetch('https://world.openfoodfacts.org/cgi/search.pl?search_terms='+encodeURIComponent(q)+'&json=1&page_size=8&lc=de&cc=de');
+    const data=await res.json();
+    const products=(data.products||[]).filter(p=>p.product_name_de||p.product_name);
+    if(!products.length){el.innerHTML='<div class="empty-state">Keine Ergebnisse</div>';return;}
+    el.innerHTML=products.map(p=>{
+      const name=p.product_name_de||p.product_name||'';
+      const n=p.nutriments||{};
+      const k100=Math.round(n['energy-kcal_100g']||0);
+      const e100=Math.round((n.proteins_100g||0)*10)/10;
+      const f100=Math.round((n.fat_100g||0)*10)/10;
+      const kh100=Math.round((n.carbohydrates_100g||0)*10)/10;
+      return `<div class="food-item" onclick="selectOFFMeal('${dk}','${slot}','${name.replace(/'/g,"\'")}',${k100},${e100},${f100},${kh100})">
+        <div style="flex:1">
+          <div class="food-name">${name}</div>
+          <div class="food-detail">pro 100g: ${k100} kcal · EW ${e100}g · F ${f100}g · KH ${kh100}g</div>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){
+    if(el)el.innerHTML='<span style="color:#E24B4A">Verbindungsfehler</span>';
+  }
+};
+
+window.selectOFFMeal=function(dk,slot,name,k100,e100,f100,kh100){
+  document.getElementById('modal-content').innerHTML=`
+    <button class="close-btn" onclick="closeModal()">×</button>
+    <div class="modal-title">${name}</div>
+    <div style="font-size:12px;color:#888;margin-bottom:12px">pro 100g: ${k100} kcal · EW ${e100}g · F ${f100}g · KH ${kh100}g</div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
+      <input class="inp" type="number" id="off-g" value="100" min="1" style="margin:0;width:90px">
+      <span style="font-size:13px;color:#888">g</span>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button class="primary-btn" style="flex:1;margin:0" onclick="addOFFMeal('${dk}','${slot}','${name.replace(/'/g,"\'")}',${k100},${e100},${f100},${kh100})">Hinzufügen</button>
+      <button class="primary-btn" style="flex:1;margin:0;background:#1A5276" onclick="addOFFMeal('${dk}','${slot}','${name.replace(/'/g,"\'")}',${k100},${e100},${f100},${kh100},true)">+ Speichern</button>
+    </div>`;
+};
+
+window.addOFFMeal=function(dk,slot,name,k100,e100,f100,kh100,save_db=false){
+  const g=parseFloat(document.getElementById('off-g').value)||100;
+  const entry={
+    id:'off'+Date.now(),name,cat:'Eigene',
+    portion:g+'g',
+    kcal:Math.round(k100*g/100),
+    ew:Math.round(e100*g/100),
+    fett:Math.round(f100*g/100),
+    kh:Math.round(kh100*g/100),
+    kcal100:k100,ew100:e100,fett100:f100,kh100:kh100,
+    g,type:'custom'
+  };
+  if(!Array.isArray(getDay(dk)[slot]))getDay(dk)[slot]=[];
+  getDay(dk)[slot].push({...entry});
+  if(save_db){customMeals.push(entry);saveToSheets(entry,'lebensmittel');}
+  save();closeModal();refresh();
+};
+window.showManualEntry=function(dk,slot){
+  document.getElementById('modal-content').innerHTML=`
+    <button class="close-btn" onclick="closeModal()">×</button>
+    <div class="modal-title">Manuell eingeben</div>
+    <div class="tip">Gericht das nicht in der Datenbank ist – einfach Name und Nährwerte eingeben</div>
+    <input class="inp" type="text" id="me-name" placeholder="Name des Gerichts / Lebensmittels">
+    <div class="inp-row">
+      <input class="inp" type="number" id="me-kcal" placeholder="kcal" min="0">
+      <input class="inp" type="number" id="me-ew" placeholder="EW (g)" min="0">
+    </div>
+    <div class="inp-row">
+      <input class="inp" type="number" id="me-fett" placeholder="Fett (g)" min="0">
+      <input class="inp" type="number" id="me-kh" placeholder="KH (g)" min="0">
+    </div>
+    <input class="inp" type="text" id="me-portion" placeholder="Portion (z.B. 1 Teller, 200g)">
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="primary-btn" style="flex:1" onclick="addManualEntry('${dk}','${slot}')">Hinzufügen</button>
+      <button class="primary-btn" style="flex:1;background:#1A5276" onclick="addManualEntry('${dk}','${slot}',true)">+ In Datenbank speichern</button>
+    </div>`;
+};
+window.addManualEntry=function(dk,slot,save_db=false){
+  const name=document.getElementById('me-name').value;
+  if(!name)return;
+  const entry={
+    id:'me'+Date.now(),
+    name,
+    cat:'Eigene',
+    portion:document.getElementById('me-portion').value||'1 Portion',
+    kcal:+document.getElementById('me-kcal').value||0,
+    ew:+document.getElementById('me-ew').value||0,
+    fett:+document.getElementById('me-fett').value||0,
+    kh:+document.getElementById('me-kh').value||0,
+    type:'custom'
+  };
+  if(!Array.isArray(getDay(dk)[slot]))getDay(dk)[slot]=[];
+  getDay(dk)[slot].push({...entry});
+  if(save_db){
+    customMeals.push(entry);
+    saveToSheets(entry,'lebensmittel');
+  }
+  save();closeModal();refresh();
+};
+
+window.openMealScanner=async function(dk,slot){
+  document.getElementById('modal-content').innerHTML=`
+    <button class="close-btn" onclick="closeScanner()">×</button>
+    <div class="modal-title">Lebensmittel scannen</div>
+    <div class="scanner-wrap" id="scanner-wrap">
+      <video id="scanner-video" autoplay playsinline muted></video>
+      <div class="scan-overlay"><div class="scan-box"></div></div>
+      <div class="scan-line"></div>
+    </div>
+    <div id="scan-status" style="text-align:center;font-size:13px;color:#888;margin-bottom:10px">Initialisiere Kamera...</div>
+    <div id="scan-result"></div>
+    <button onclick="closeScanner()" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;background:none;cursor:pointer;font-size:13px;color:#888;margin-top:8px">Abbrechen</button>`;
+  openModal();
+  try{
+    scannerStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    const video=document.getElementById('scanner-video');
+    if(video){video.srcObject=scannerStream;video.play();}
+    document.getElementById('scan-status').textContent='Barcode halten...';
+    startMealScanDetection(dk,slot);
+  }catch(e){
+    document.getElementById('scan-status').innerHTML='<span style="color:#E24B4A">Kamera nicht verfügbar</span>';
+    document.getElementById('scanner-wrap').innerHTML=`<input class="inp" type="text" id="manual-barcode-meal" placeholder="Barcode manuell eingeben" style="margin:0">
+    <button class="primary-btn" style="margin-top:6px" onclick="lookupMealBarcode(document.getElementById('manual-barcode-meal').value,'${dk}','${slot}')">Suchen</button>`;
+  }
+};
+
+function startMealScanDetection(dk,slot){
+  if(!('BarcodeDetector' in window)){
+    document.getElementById('scanner-wrap').innerHTML=`<input class="inp" type="text" id="manual-barcode-meal" placeholder="Barcode eingeben" style="margin:0">
+    <button class="primary-btn" style="margin-top:6px" onclick="lookupMealBarcode(document.getElementById('manual-barcode-meal').value,'${dk}','${slot}')">Suchen</button>`;
+    return;
+  }
+  const detector=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128']});
+  const video=document.getElementById('scanner-video');
+  let scanning=true;
+  async function detect(){
+    if(!scanning||!video||video.readyState<2)return setTimeout(detect,200);
+    try{
+      const barcodes=await detector.detect(video);
+      if(barcodes.length>0){scanning=false;lookupMealBarcode(barcodes[0].rawValue,dk,slot);}
+      else setTimeout(detect,300);
+    }catch{setTimeout(detect,500);}
+  }
+  detect();
+}
+
+async function lookupMealBarcode(code,dk,slot){
+  if(!code)return;
+  const statusEl=document.getElementById('scan-status');
+  const resultEl=document.getElementById('scan-result');
+  if(statusEl)statusEl.textContent='Suche...';
+  try{
+    const res=await fetch('https://world.openfoodfacts.org/api/v0/product/'+code.trim()+'.json?lc=de');
+    const data=await res.json();
+    if(data.status===1&&data.product){
+      const p=data.product;
+      const n=p.nutriments||{};
+      const name=p.product_name_de||p.product_name_en||p.product_name||'Unbekannt';
+      const k100=Math.round(n['energy-kcal_100g']||0);
+      const e100=Math.round((n.proteins_100g||0)*10)/10;
+      const f100=Math.round((n.fat_100g||0)*10)/10;
+      const kh100=Math.round((n.carbohydrates_100g||0)*10)/10;
+      if(statusEl)statusEl.textContent='Gefunden!';
+      if(resultEl)resultEl.innerHTML=`
+        <div style="background:#f0fdf4;border:1px solid #1D9E75;border-radius:8px;padding:12px;margin-top:8px">
+          <div style="font-weight:500;margin-bottom:4px">${name}</div>
+          <div style="font-size:12px;color:#888;margin-bottom:8px">pro 100g: ${k100} kcal · EW ${e100}g · F ${f100}g · KH ${kh100}g</div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+            <input class="inp" type="number" id="meal-scan-g" value="100" min="1" style="margin:0;width:80px">
+            <span style="font-size:13px;color:#888">g</span>
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="primary-btn" style="flex:1;margin:0" onclick="addScannedMeal('${dk}','${slot}','${name.replace(/'/g,"\'")}',${k100},${e100},${f100},${kh100})">Hinzufügen</button>
+            <button class="primary-btn" style="flex:1;margin:0;background:#1A5276" onclick="addScannedMeal('${dk}','${slot}','${name.replace(/'/g,"\'")}',${k100},${e100},${f100},${kh100},true)">+ Speichern</button>
+          </div>
+        </div>`;
+    }else{
+      if(statusEl)statusEl.innerHTML='<span style="color:#E24B4A">Nicht gefunden</span>';
+    }
+  }catch(e){
+    if(statusEl)statusEl.innerHTML='<span style="color:#E24B4A">Verbindungsfehler</span>';
+  }
+}
+window.addScannedMeal=function(dk,slot,name,k100,e100,f100,kh100,save_db=false){
+  const g=parseFloat(document.getElementById('meal-scan-g').value)||100;
+  const entry={
+    id:'scan'+Date.now(),
+    name,cat:'Eigene',
+    portion:g+'g',
+    kcal:Math.round(k100*g/100),
+    ew:Math.round(e100*g/100),
+    fett:Math.round(f100*g/100),
+    kh:Math.round(kh100*g/100),
+    kcal100:k100,ew100:e100,fett100:f100,kh100:kh100,
+    g,type:'custom'
+  };
+  if(!Array.isArray(getDay(dk)[slot]))getDay(dk)[slot]=[];
+  getDay(dk)[slot].push({...entry});
+  if(save_db){customMeals.push(entry);save();saveToSheets(entry,'lebensmittel');}
+  else save();
+  stopScannerStream();closeModal();refresh();
+};
+window.openIngScanner=async function(ingIdx){
+  document.getElementById('modal-content').innerHTML=`
+    <button class="close-btn" onclick="closeScanner()">×</button>
+    <div class="modal-title">Zutat scannen</div>
+    <div class="tip">Barcode der Zutat scannen – Nährwerte werden automatisch übernommen</div>
+    <div class="scanner-wrap" id="scanner-wrap">
+      <video id="scanner-video" autoplay playsinline muted></video>
+      <div class="scan-overlay"><div class="scan-box"></div></div>
+      <div class="scan-line"></div>
+    </div>
+    <div id="scan-status" style="text-align:center;font-size:13px;color:#888;margin-bottom:10px">Initialisiere Kamera...</div>
+    <div id="scan-result"></div>
+    <div style="text-align:center;margin-top:8px">
+      <button onclick="closeScanner()" style="padding:8px 20px;border:1px solid #ddd;border-radius:8px;background:none;cursor:pointer;font-size:13px;color:#888">Abbrechen</button>
+    </div>`;
+  openModal();
+  try {
+    scannerStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    const video=document.getElementById('scanner-video');
+    if(video){video.srcObject=scannerStream;video.play();}
+    document.getElementById('scan-status').textContent='Barcode vor die Kamera halten...';
+    // Use same detection but for ingredient
+    startIngBarcodeDetection(ingIdx);
+  } catch(e) {
+    document.getElementById('scan-status').innerHTML='<span style="color:#E24B4A">Kamerazugriff nicht möglich – manuell eingeben:</span>';
+    document.getElementById('scanner-wrap').innerHTML=`<input class="inp" type="text" id="manual-barcode-ing" placeholder="Barcode-Nummer" style="margin:0">
+    <button class="primary-btn" style="margin-top:6px" onclick="lookupIngBarcode(document.getElementById('manual-barcode-ing').value,${ingIdx})">Suchen</button>`;
+  }
+};
+
+function startIngBarcodeDetection(ingIdx){
+  if(!('BarcodeDetector' in window)){
+    document.getElementById('scan-status').innerHTML='Manuell eingeben:';
+    document.getElementById('scanner-wrap').innerHTML=`<input class="inp" type="text" id="manual-barcode-ing" placeholder="Barcode-Nummer" style="margin:0">
+    <button class="primary-btn" style="margin-top:6px" onclick="lookupIngBarcode(document.getElementById('manual-barcode-ing').value,${ingIdx})">Suchen</button>`;
+    return;
+  }
+  const detector=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128']});
+  const video=document.getElementById('scanner-video');
+  let scanning=true;
+  async function detect(){
+    if(!scanning||!video||video.readyState<2)return setTimeout(detect,200);
+    try{
+      const barcodes=await detector.detect(video);
+      if(barcodes.length>0){
+        scanning=false;
+        lookupIngBarcode(barcodes[0].rawValue,ingIdx);
+      } else setTimeout(detect,300);
+    }catch{setTimeout(detect,500);}
+  }
+  detect();
+}
+
+async function lookupIngBarcode(code,ingIdx){
+  if(!code)return;
+  const statusEl=document.getElementById('scan-status');
+  const resultEl=document.getElementById('scan-result');
+  if(statusEl)statusEl.textContent='Suche Produkt...';
+  try{
+    const res=await fetch('https://world.openfoodfacts.org/api/v0/product/'+code.trim()+'.json?lc=de');
+    const data=await res.json();
+    if(data.status===1&&data.product){
+      const p=data.product;
+      const n=p.nutriments||{};
+      const name=p.product_name_de||p.product_name_en||p.product_name||'Unbekannt';
+      const k100=Math.round(n['energy-kcal_100g']||0);
+      const e100=Math.round((n.proteins_100g||0)*10)/10;
+      const f100=Math.round((n.fat_100g||0)*10)/10;
+      const kh100=Math.round((n.carbohydrates_100g||0)*10)/10;
+      if(statusEl)statusEl.textContent='Gefunden!';
+      if(resultEl)resultEl.innerHTML=`
+        <div style="background:#f0fdf4;border:1px solid #1D9E75;border-radius:8px;padding:12px;margin-top:8px">
+          <div style="font-weight:500;margin-bottom:4px">${name}</div>
+          <div style="font-size:12px;color:#888;margin-bottom:10px">pro 100g: ${k100} kcal · EW ${e100}g · Fett ${f100}g · KH ${kh100}g</div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+            <input class="inp" type="number" id="ing-scan-g" value="100" min="1" style="margin:0;width:80px">
+            <span style="font-size:13px;color:#888">g</span>
+          </div>
+          <button class="primary-btn" onclick="applyIngBarcode(${ingIdx},'${name.replace(/'/g,"\'")}',${k100},${e100},${f100},${kh100})">Zutat übernehmen</button>
+        </div>`;
+    } else {
+      if(statusEl)statusEl.innerHTML='<span style="color:#E24B4A">Nicht gefunden</span>';
+    }
+  }catch(e){
+    if(statusEl)statusEl.innerHTML='<span style="color:#E24B4A">Verbindungsfehler</span>';
+  }
+}
+
+window.applyIngBarcode=function(ingIdx,name,k100,e100,f100,kh100){
+  const g=parseFloat(document.getElementById('ing-scan-g').value)||100;
+  if(ingredients[ingIdx]){
+    ingredients[ingIdx].name=name;
+    ingredients[ingIdx].kcal100=k100;
+    ingredients[ingIdx].ew100=e100;
+    ingredients[ingIdx].fett100=f100;
+    ingredients[ingIdx].kh100=kh100;
+    ingredients[ingIdx].g=g;
+  }
+  stopScannerStream();
+  closeModal();
+  renderIngList();
+};
+
 window.openIngPicker=function(ingIdx){
   let search='',activeCat='Alle';
-  const cats=['Alle','Proteinquelle','Wurst','Beilage','Gemüse','Backwaren','Aufstrich','Süßes','Käse','Convenience','Frühstück','Snack'];
+  const cats=['Alle','Proteinquelle','Wurst','Beilage','Gemüse','Obst','Backwaren','Aufstrich','Käse','Convenience','Restaurant','Frühstück','Snack herzhaft','Snack süß','Snack Protein'];
   
   function renderIPList(){
     const filtered=allMeals().filter(m=>{
@@ -1114,8 +2020,9 @@ function renderIngList(){
         ${ingredients.length>1?`<button onclick="remI(${i})" style="background:none;border:none;color:#aaa;font-size:20px;cursor:pointer;padding:0;line-height:1;flex-shrink:0">×</button>`:''}
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
-        <button onclick="openIngPicker(${i})" style="padding:6px 12px;border:1px solid #185FA5;border-radius:8px;background:#EBF5FB;cursor:pointer;font-size:12px;color:#185FA5;white-space:nowrap;font-weight:500">Aus Datenbank wählen</button>
-        <button onclick="doSearchOFF(${i})" style="padding:6px 12px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:12px;color:#888;white-space:nowrap">Online suchen (OFF)</button>
+        <button onclick="openIngPicker(${i})" style="padding:6px 12px;border:1px solid #185FA5;border-radius:8px;background:#EBF5FB;cursor:pointer;font-size:12px;color:#185FA5;white-space:nowrap;font-weight:500">Aus Datenbank</button>
+        <button onclick="openIngScanner(${i})" style="padding:6px 12px;border:1px solid #1D9E75;border-radius:8px;background:#F0FDF4;cursor:pointer;font-size:12px;color:#1D9E75;white-space:nowrap">📷 Scannen</button>
+        <button onclick="doSearchOFF(${i})" style="padding:6px 12px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:12px;color:#888;white-space:nowrap">Online suchen</button>
       </div>
       ${g.fromOff?'<div style="font-size:11px;color:#1D9E75;margin-bottom:6px;font-weight:500">Nährwerte aus Open Food Facts</div>':''}
       <div style="font-size:11px;color:#888;margin-bottom:4px">pro 100g:</div>
@@ -1184,13 +2091,55 @@ window.calcRez=()=>{
   </div>`;
 };
 
-window.saveRez=(name,port,cat,pk,pe,pf,pkh)=>{
+
+window.editRezept=function(idx){
+  const r=rezepte[idx];
+  if(!r)return;
+  // Load recipe into the Rezept-Rechner
+  setDbSub('rezepte');
+  renderDatenbank();
+  // Pre-fill the form
+  setTimeout(()=>{
+    const nameEl=document.getElementById('rn');
+    const portEl=document.getElementById('rp');
+    const catEl=document.getElementById('rcat');
+    const descEl=document.getElementById('rdesc');
+    if(nameEl)nameEl.value=r.name;
+    if(portEl)portEl.value=r.portionen||1;
+    if(catEl)catEl.value=r.cat;
+    if(descEl)descEl.value=r.desc||'';
+    // Load ingredients
+    if(r.zutaten&&r.zutaten.length>0){
+      ingredients=r.zutaten.map(z=>({...z}));
+    }
+    renderIngList();
+    // Mark as editing
+    document.getElementById('rez-result').innerHTML=`<div style="background:#FEF9E7;border:1px solid #F39C12;border-radius:8px;padding:8px;font-size:12px;color:#7D6608;margin-bottom:8px">✏️ Bearbeitungsmodus – Rezept "${r.name}" wird überschrieben wenn du speicherst</div>`;
+    // Override saveRez to update instead of add
+    window._editingRezIdx=idx;
+  },100);
+  switchTab('datenbank');
+};
+window.saveRez=async(name,port,cat,pk,pe,pf,pkh)=>{
   const descEl=document.getElementById('rdesc');
   const desc=descEl?descEl.value:'';
   const ings=ingredients.map(g=>({name:g.name,g:g.g,kcal100:g.kcal100,ew100:g.ew100,fett100:g.fett100,kh100:g.kh100}));
-  rezepte.push({id:'r'+Date.now(),name,cat,portion:`1 von ${port} Port.`,portionen:port,kcal:pk,ew:pe,fett:pf,kh:pkh,type:'rezept',desc,zutaten:ings});
+  const newRez={id:'r'+Date.now(),name,cat,portion:`1 von ${port} Port.`,portionen:port,kcal:pk,ew:pe,fett:pf,kh:pkh,type:'rezept',desc,zutaten:ings};
+  // Handle edit mode
+  if(window._editingRezIdx!==undefined){
+    const idx=window._editingRezIdx;
+    delete window._editingRezIdx;
+    newRez.id=rezepte[idx].id;
+    rezepte[idx]=newRez;
+  } else {
+    rezepte.push(newRez);
+  }
   save();ingredients=[];
-  document.getElementById('rez-result').innerHTML=`<div style="color:#1D9E75;font-size:13px;font-weight:500;padding:10px 0">Gespeichert! Rezept ist jetzt in Auswahl und Rezeptbuch.</div>`;
+  // Auch in Google Sheets speichern
+  saveToSheets(newRez,'rezept').then(sheetsId=>{
+    if(sheetsId) console.log('Rezept in Sheets gespeichert:', sheetsId);
+  });
+  document.getElementById('rez-result').innerHTML=`<div style="color:#1D9E75;font-size:13px;font-weight:500;padding:10px 0">✅ Gespeichert lokal & in Google Sheets!</div>`;
   setTimeout(()=>{setDbSub('mahlzeiten');renderDatenbank();},1400);
 };
 window.delR=i=>{rezepte.splice(i,1);save();renderDbContent();};
@@ -1210,8 +2159,11 @@ function openAddMahlzeit(){
 }
 window.saveCM=()=>{
   const name=document.getElementById('cm-n').value;if(!name)return;
-  customMeals.push({id:'c'+Date.now(),name,cat:document.getElementById('cm-c').value,portion:document.getElementById('cm-p').value,kcal:+document.getElementById('cm-k').value||0,ew:+document.getElementById('cm-e').value||0,fett:+document.getElementById('cm-f').value||0,kh:+document.getElementById('cm-kh').value||0,type:'custom'});
-  save();closeModal();renderDatenbank();
+  const newItem={id:'c'+Date.now(),name,cat:document.getElementById('cm-c').value,portion:document.getElementById('cm-p').value,kcal:+document.getElementById('cm-k').value||0,ew:+document.getElementById('cm-e').value||0,fett:+document.getElementById('cm-f').value||0,kh:+document.getElementById('cm-kh').value||0,type:'custom'};
+  customMeals.push(newItem);
+  save();
+  saveToSheets(newItem,'lebensmittel');
+  closeModal();renderDatenbank();
 };
 
 function renderSport(){
@@ -1238,6 +2190,133 @@ document.getElementById('modal-bg').addEventListener('click',function(e){if(e.ta
 
 
 
+
+
+// ── MOUNJARO ──────────────────────────────────────────────────────────────────
+function renderMounjaro(){
+  const el=document.getElementById('mounjaro');
+  if(!el)return;
+  const stellen=['Bauch links','Bauch rechts','Oberschenkel links','Oberschenkel rechts','Oberarm links','Oberarm rechts'];
+  const befinden=['😊 Gut','😄 Sehr gut','😌 Okay','🤢 Übelkeit','😴 Müdigkeit','😓 Schwach'];
+  
+  let html=`
+    <div style="background:linear-gradient(135deg,#8E44AD,#6C3483);color:#fff;padding:16px;margin:-12px -12px 16px;border-radius:0 0 16px 16px">
+      <div style="font-size:11px;opacity:0.8;margin-bottom:4px">MOUNJARO PROTOKOLL</div>
+      <div style="font-size:22px;font-weight:700">💉 Tirzepatid</div>
+      <div style="font-size:12px;opacity:0.8;margin-top:4px">Wöchentlich donnerstags</div>
+    </div>`;
+
+  // Statistik
+  if(mounjaro.length>0){
+    const last=mounjaro[mounjaro.length-1];
+    const woche=mounjaro.length;
+    html+=`<div class="card" style="background:#FAF0FF;border:1px solid #E8D5F5">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">
+        <div><div style="font-size:20px;font-weight:700;color:#8E44AD">${woche}</div><div style="font-size:10px;color:#888">Wochen</div></div>
+        <div><div style="font-size:20px;font-weight:700;color:#8E44AD">${last.dosis}</div><div style="font-size:10px;color:#888">Aktuelle Dosis</div></div>
+        <div><div style="font-size:20px;font-weight:700;color:#1D9E75">${mounjaro.length>1?(mounjaro[0].gewicht-(last.gewicht||0)).toFixed(1)+' kg':'–'}</div><div style="font-size:10px;color:#888">Abgenommen</div></div>
+      </div>
+    </div>`;
+  }
+
+  // Neue Injektion eintragen
+  html+=`<div class="card">
+    <div class="label">Neue Injektion eintragen</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <div>
+        <div style="font-size:11px;color:#888;margin-bottom:4px">Datum</div>
+        <input type="date" id="mj-date" value="${todayKey()}" class="inp" style="margin:0;font-size:13px">
+      </div>
+      <div>
+        <div style="font-size:11px;color:#888;margin-bottom:4px">Dosis (mg)</div>
+        <input type="number" id="mj-dosis" class="inp" style="margin:0;font-size:13px" 
+          placeholder="z.B. 2.75" step="0.25" min="0.25" max="15" value="2.5">
+      </div>
+    </div>
+    <div style="margin-bottom:10px">
+      <div style="font-size:11px;color:#888;margin-bottom:4px">Injektionsstelle</div>
+      <select id="mj-stelle" class="inp" style="margin:0;font-size:13px">
+        ${stellen.map(s=>`<option>${s}</option>`).join('')}
+      </select>
+    </div>
+    <div style="margin-bottom:10px">
+      <div style="font-size:11px;color:#888;margin-bottom:4px">Allgemeinbefinden</div>
+      <select id="mj-bef" class="inp" style="margin:0;font-size:13px">
+        ${befinden.map(b=>`<option>${b}</option>`).join('')}
+      </select>
+    </div>
+    <div style="margin-bottom:10px">
+      <div style="font-size:11px;color:#888;margin-bottom:4px">Gewicht heute (optional)</div>
+      <input type="number" id="mj-gew" class="inp" style="margin:0;font-size:13px" placeholder="z.B. 116,5" step="0.1" min="30" max="300">
+    </div>
+    <div style="margin-bottom:10px">
+      <div style="font-size:11px;color:#888;margin-bottom:4px">Notizen (optional)</div>
+      <textarea id="mj-notiz" class="inp" style="margin:0;font-size:13px;resize:vertical;min-height:60px" placeholder="Nebenwirkungen, Besonderheiten..."></textarea>
+    </div>
+    <button class="primary-btn" onclick="saveMounjaro()">💉 Injektion speichern</button>
+  </div>`;
+
+  // Verlauf
+  if(mounjaro.length>0){
+    html+=`<div class="section-head">Verlauf</div>
+    <div class="card" style="padding:4px 14px">`;
+    [...mounjaro].reverse().forEach((e,i)=>{
+      html+=`<div class="meal-row">
+        <div class="meal-info">
+          <div class="meal-name">Woche ${mounjaro.length-i} – ${e.datum} · ${e.dosis}</div>
+          <div class="meal-macro">${e.stelle} · ${e.befinden}${e.gewicht?' · '+e.gewicht+' kg':''}</div>
+          ${e.notiz?`<div style="font-size:11px;color:#888;margin-top:2px">${e.notiz}</div>`:''}
+        </div>
+        <button class="del-btn" onclick="delMounjaro(${mounjaro.length-1-i})">×</button>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+
+  el.innerHTML=html;
+}
+
+window.saveMounjaro=function(){
+  const datum=document.getElementById('mj-date').value;
+  const dosis=document.getElementById('mj-dosis').value+' mg';
+  const stelle=document.getElementById('mj-stelle').value;
+  const bef=document.getElementById('mj-bef').value;
+  const gew=document.getElementById('mj-gew').value;
+  const notiz=document.getElementById('mj-notiz').value;
+  
+  mounjaro.push({datum,dosis,stelle,befinden:bef,gewicht:gew?parseFloat(gew):null,notiz});
+  
+  // Gewicht auch in weights eintragen falls angegeben
+  if(gew){
+    const g=parseFloat(gew);
+    const idx=weights.findIndex(e=>e.date===datum);
+    if(idx>=0)weights[idx].w=g; else weights.push({date:datum,w:g});
+    weights.sort((a,b)=>a.date.localeCompare(b.date));
+    profile.gewicht=g;
+  }
+  
+  save();
+  
+  // Auch ins Google Sheet speichern
+  saveToSheets({
+    action:'addMounjaro',
+    datum,dosis,stelle,befinden:bef,gewicht:gew||'',notiz
+  },'mounjaro');
+  
+  renderMounjaro();
+  
+  // Bestätigung
+  const c=document.createElement('div');
+  c.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#8E44AD;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;z-index:999;white-space:nowrap';
+  c.textContent='💉 Injektion gespeichert!';
+  document.body.appendChild(c);
+  setTimeout(()=>c.remove(),3000);
+};
+
+window.delMounjaro=function(idx){
+  mounjaro.splice(idx,1);
+  save();renderMounjaro();
+};
 
 // ── REZEPTBUCH ────────────────────────────────────────────────────────────────
 function renderRezeptbuch(){
@@ -1286,6 +2365,18 @@ function renderRezeptbuch(){
 
 // ── EINKAUFSLISTE ─────────────────────────────────────────────────────────────
 let einkaufListe=ls('ep_einkauf',[]);
+let mounjaro=ls('ep_mounjaro',[]);
+let favoriten=ls('ep_favoriten',[]);
+let sheetWochenplan=ls('ep_wochenplan',{});
+
+// Merge FB-Rezepte nach allen State-Variablen
+(function initFBRezepte(){
+  const existingIds=new Set(rezepte.map(r=>r.id));
+  let added=false;
+  BUILTIN_REZEPTE.forEach(r=>{if(!existingIds.has(r.id)){rezepte.push(r);added=true;}});
+  if(added)save();
+})();
+
 function saveEinkauf(){ss('ep_einkauf',einkaufListe);}
 
 function addToEinkaufById(id){
@@ -1564,12 +2655,12 @@ async function lookupBarcode(code){
   const resultEl=document.getElementById('scan-result');
   if(statusEl)statusEl.textContent='Suche Produkt...';
   try{
-    const res=await fetch('https://world.openfoodfacts.org/api/v0/product/'+code.trim()+'.json');
+    const res=await fetch('https://world.openfoodfacts.org/api/v0/product/'+code.trim()+'.json?lc=de');
     const data=await res.json();
     if(data.status===1&&data.product){
       const p=data.product;
       const n=p.nutriments||{};
-      const name=p.product_name_de||p.product_name||'Unbekanntes Produkt';
+      const name=p.product_name_de||p.product_name_en||p.product_name||'Unbekanntes Produkt';
       const brand=p.brands||'';
       const kcal100=Math.round(n['energy-kcal_100g']||n['energy_100g']/4.184||0);
       const ew100=Math.round((n.proteins_100g||0)*10)/10;
@@ -1625,6 +2716,8 @@ window.saveBarcodeProduct=function(name,brand,k100,e100,f100,kh100){
   };
   customMeals.push(newItem);
   save();
+  // Auch in Google Sheets speichern
+  saveToSheets({...newItem,cat:'Supermarkt (gescannt)'},'lebensmittel');
   stopScannerStream();
   closeModal();
   // Show confirmation
@@ -1638,7 +2731,7 @@ window.saveBarcodeProduct=function(name,brand,k100,e100,f100,kh100){
 let activeTab='heute';
 function switchTab(tab){
   activeTab=tab;
-  document.querySelectorAll('.tab').forEach((t,i)=>{t.classList.toggle('active',['heute','morgen','gewicht','datenbank','rezeptbuch','einkauf','sport'][i]===tab);});
+  document.querySelectorAll('.tab').forEach((t,i)=>{t.classList.toggle('active',['heute','morgen','gewicht','datenbank','rezeptbuch','einkauf','sport','mounjaro'][i]===tab);});
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(tab).classList.add('active');
   refresh();
@@ -1652,8 +2745,33 @@ function refresh(){
   else if(activeTab==='rezeptbuch')renderRezeptbuch();
   else if(activeTab==='einkauf')renderEinkauf();
   else if(activeTab==='sport')renderSport();
+  else if(activeTab==='mounjaro')renderMounjaro();
 }
+
+// Auto-Tagebucheintrag beim Tageswechsel
+(function checkDayChange(){
+  const lastDay=localStorage.getItem('ep_last_day');
+  const today=new Date().toISOString().slice(0,10);
+  if(lastDay&&lastDay!==today){
+    // Gestern automatisch ins Tagebuch
+    setTimeout(()=>saveTagebuch(lastDay),2000);
+  }
+  localStorage.setItem('ep_last_day',today);
+})();
 refresh();
+// Beim Start: gecachte Sheets-Daten laden
+loadFromSheets().then(()=>{
+  const bar=document.getElementById('sync-status-bar');
+  if(bar){
+    bar.style.display='flex';
+    const badge=document.getElementById('sync-badge');
+    if(badge){
+      const total=sheetsMeals.length+sheetsRezepte.length;
+      badge.textContent=total>0?total+' aus Sheets (gecacht)':'Noch kein Sync';
+    }
+    if(sheetsMeals.length+sheetsRezepte.length>0) refresh();
+  }
+});
 </script>
 </body>
 </html>
